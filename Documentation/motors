@@ -1,0 +1,8 @@
+Going from raspberry PI to power box: 
+
+Pin 15 (CANNOT USE)
+Pin 25 (Front Left)
+Pin 9 (Back Left)
+Pin 11 (deploy)
+Pin 27 (Front Right)
+Pin 29 (Back Right)

@@ -1,0 +1,43 @@
+Works on Pi: 
+gst-launch-1.0 -e v4l2src device=/dev/video0 ! videoconvert ! x264enc ! avimux ! filesink location=artem.avi
+
+----------------------
+
+
+
+
+ffmpeg -f v4l2 -i /dev/video0 -pix_fmt yuv420p -vf scale=480:320 -preset ultrafast -b:v 600k -f rtsp rtsp://localhost:8554/mystream
+
+gst-launch-1.0 playbin uri=rtsp://127.0.0.1:8554/mystream buffer-size=100 protocols=udp
+
+
+
+------------------------------------
+
+
+ffmpeg -f v4l2 -i /dev/video0 -pix_fmt yuv420p -vf scale=480:320 -deadline realtime -b:v 600k -f rtsp rtsp://localhost:8554/mystream
+
+
+
+
+gst-launch-1.0 -e v4l2src device=/dev/video2 ! videoconvert ! x264enc ! rtspclientsink protocols=tcp name=s location=rtsp://localhost:8554/mystream
+
+gst-launch-1.0 filesrc location=file.mp4 ! qtdemux name=d d.video_0 ! rtspclientsink protocols=tcp name=s location=rtsp://localhost:8554/mystream
+
+
+
+
+ffmpeg -hwaccel vaapi -vaapi_device /dev/dri/renderD128 -hwaccel_output_format vaapi -f v4l2 -input_format yuyv422 -video_size 1920x1080 -framerate 30 -use_wallclock_as_timestamps 1 -fflags +genpts -i /dev/video0 -an -vf 'format=nv12|vaapi,hwupload' -vcodec h264_vaapi -bf 0 -f rtsp rtsp://127.0.0.1:8554/stream
+
+
+https://kaanlabs.com/low-latency-webcam-to-browser-streaming-with-rtsp-webrtc/
+
+
+
+
+
+----
+
+laptop:
+
+ffmpeg -hwaccel vaapi -vaapi_device /dev/dri/renderD128 -hwaccel_output_format vaapi -f v4l2 -input_format yuyv422 -video_size 1920x1080 -framerate 30 -use_wallclock_as_timestamps 1 -fflags +genpts -i /dev/video0 -an -vf 'format=nv12|vaapi,hwupload' -vcodec h264_vaapi -bf 0 -f rtsp rtsp://127.0.0.1:8554/stream

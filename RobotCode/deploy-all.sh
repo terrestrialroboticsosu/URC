@@ -1,0 +1,1 @@
+scp -r src/ include/ subprojects/ meson.build fros@192.168.0.10:~/code/
