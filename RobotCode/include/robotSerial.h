@@ -6,21 +6,20 @@
 
 #define SERIAL_MES_LEN 13
 #define SERIAL_RX_BUF_SIZE 128
-#define SERIAL_MES_DATA_LEN 8
-
-#define SERIAL_MSG_TYPE_INTAKE_POS_TLM 0x41
-#define SERIAL_MSG_TYPE_LOG 0x61
+#define SERIAL_MES_DATA_LEN 12
 
 enum SerialPacketType {
-    SERIAL_PACKET_INTAKE_POS = 0x41,
-    SERIAL_PACKET_LOG = 0x61,
+    PACKET_INTAKE_POS = 0x41,
+    PACKET_LOG = 0x61,
+    PACKET_HEARTBEAT = 0x01,
+    PACKET_GAMEPAD = 0x02,
 };
 
 union SerialPacket
 {
     uint8_t packet[SERIAL_MES_LEN];
     struct {
-        private: const uint16_t syncBytes = 0xBEEF; // tf is this??
+        private: const uint16_t syncBytes = 0xBEEF;
         public:
         uint8_t messageType = 0x00;
         uint8_t data[SERIAL_MES_DATA_LEN] = {0};
@@ -40,7 +39,7 @@ class RobotSerial
 public:
     RobotSerial(std::string port, unsigned int baud_rate);
     bool readNextMessage(SerialPacket *packet);
-    void sendHeartbeat(); // TODO: Probably make this method virtual and let the subclasses have their own version
+    void sendHeartbeat(int robotState, bool rp2040Connected);
     bool isConnected();
 
     int sendCurrentQueue();

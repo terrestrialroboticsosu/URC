@@ -1,6 +1,7 @@
 #pragma once
 #include "driverStation.h"
 #include "robotActuation.h"
+#include "robotSerial.h"
 #include "robotState.h"
 
 class RobotControl{
@@ -21,7 +22,7 @@ public:
 
     void handleGamepadPacket(GamepadPacket packet);
 
-    void handleDsHeartbeatPacket(DsHeartbeatPacket packet);
+    void handleDsHeartbeatPacket(SerialPacket packet);
 
     void disableRobot();
 

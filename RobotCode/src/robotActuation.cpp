@@ -5,6 +5,12 @@
 RobotActuation::RobotActuation(std::string port, unsigned int baud_rate) : RobotSerial(port, baud_rate) {
 }
 
+void RobotActuation::sendHeartbeat() {
+    SerialPacket packet = {0xBE, 0xEF};
+    packet.portions.messageType = PACKET_HEARTBEAT;
+    enqueueMessage(&packet);
+}
+
 void RobotActuation::sendDriveMotors(int8_t frontLeftMotor, int8_t frontRightMotor, int8_t backLeftMotor,
                                      int8_t backRightMotor) {
     SerialPacket packet = {0xBE, 0xEF};

@@ -1,12 +1,12 @@
 #include <iostream>
 #include <string>
-#include <thread>
 #include <atomic>
 
 #include "driverStation.h"
 #include "robotActuation.h"
 #include "robotControl.h"
 #include "robotState.h"
+#include "robotSerial.h"
 #include "util.h"
 
 #define DS_HEARTBEAT_RATE_MS 500
@@ -17,16 +17,15 @@ std::atomic<bool> shutdown_flag(false);
 void handle_shutdown_signal(int signal) { shutdown_flag = true; }
 
 bool handleDsMessages(DsCommunicator &dsComms, RobotControl &control) {
-    DsPacket dsPacket;
+    SerialPacket dsPacket = {0};
     bool anyMessageRecv = false;
-    while (dsComms.receiveMessage(&dsPacket)) {
+    while (dsComms.readNextMessage(&dsPacket)) {
         anyMessageRecv = true;
-        DsPacketType type = dsPacket.getType();
+        SerialPacketType type = dsPacket.GetType();
 
-        if (type == DS_PACKET_HEARTBEAT) {
-            DsHeartbeatPacket heartbeatPacket(dsPacket);
-            control.handleDsHeartbeatPacket(heartbeatPacket);
-        } else if (type == DS_PACKET_GAMEPAD) {
+        if (type == PACKET_HEARTBEAT) {
+            control.handleDsHeartbeatPacket(dsPacket);
+        } else if (type == PACKET_GAMEPAD) {
             GamepadPacket gamepadPacket(dsPacket);
             control.handleGamepadPacket(gamepadPacket);
         }
@@ -55,11 +54,9 @@ int main(int argc, char *argv[]) {
         uint64_t currentTime = getUnixTimeMs();
 
         // Driver Station Comms
-        dsComms.update();
         if (dsComms.isConnected()) {
             if (currentTime - lastSentDsHearbeat > DS_HEARTBEAT_RATE_MS) {
-                dsComms.sendHeartbeat(control.getRobotState().isRobotEnabled(), rp2040.isConnected(),
-                                      control.getRobotState().getRobotMode());
+                dsComms.sendHeartbeat(control.getRobotState().getRobotMode(), rp2040.isConnected());
                 lastSentDsHearbeat = currentTime;
             }
 
@@ -68,7 +65,7 @@ int main(int argc, char *argv[]) {
             } else if (currentTime - lastDsMessageRx > DS_TIMEOUT_MS) {
                 std::cout << "DS has not sent a message for " << (currentTime - lastDsMessageRx)
                           << "ms. Killing connection" << std::endl;
-                dsComms.close();
+                return 1;
             }
         } else {
             control.disableRobot();
@@ -82,15 +79,16 @@ int main(int argc, char *argv[]) {
         if (rp2040.isConnected()) {
             SerialPacket packet = {0};
             while (rp2040.readNextMessage(&packet)) {
-                if (packet.GetType() == SERIAL_PACKET_LOG) {
+                if (packet.GetType() == PACKET_LOG) {
                     std::string msg = packet.GetLogMessage();
 
                     std::cout << "RP2040 LOG: " << msg << std::endl;
-                } else if (packet.GetType() == SERIAL_MSG_TYPE_INTAKE_POS_TLM) {
-                    int pos = packet.GetIntakePos();
+                //} else if (packet.GetType() == PACKET_INTAKE_POS) {
+                    //int pos = packet.GetIntakePos();
 
-                    std::cout << "INTAKE POS: " << pos << std::endl;
-                    dsComms.sendIntakePos(pos);
+                    //std::cout << "INTAKE POS: " << pos << std::endl;
+                    //dsComms.sendIntakePos(pos); 
+                    // intake does not exist anymore rn this code will be removed soon
                 } else {
                     std::cout << "Received unknown message type from RP2040: " << +packet.GetType() << std::endl;
                 }
@@ -98,8 +96,6 @@ int main(int argc, char *argv[]) {
         }
     }
 
-    std::cout << "Shutting down robot code..." << std::endl;
-    dsComms.close();
     std::cout << "Robot code shutdown. Goodbye!" << std::endl;
 
     return 0;

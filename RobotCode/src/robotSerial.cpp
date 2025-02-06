@@ -42,10 +42,12 @@ bool RobotSerial::readNextMessage(SerialPacket *packet) {
     return false;
 }
 
-void RobotSerial::sendHeartbeat() {
+void RobotSerial::sendHeartbeat(int robotState, bool rp2040Connected) {
     SerialPacket packet = {0xBE, 0xEF};
 
-    packet.portions.messageType = 0x01;
+    packet.portions.messageType = PACKET_HEARTBEAT;
+    packet.portions.data[0] = robotState;
+    packet.portions.data[1] = rp2040Connected;
 
     enqueueMessage(&packet);
 }
@@ -144,7 +146,7 @@ uint16_t RobotSerial::fletcher16(const uint8_t *data, size_t len) {
 }
 
 int SerialPacket::GetIntakePos() {
-    if(this->portions.messageType != SERIAL_PACKET_INTAKE_POS) {
+    if(this->portions.messageType != PACKET_INTAKE_POS) {
         throw new std::runtime_error("packet has incorrect type: must be intake pos");
     }
 

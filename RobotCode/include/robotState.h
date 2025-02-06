@@ -2,9 +2,10 @@
 
 #include <stdint.h>
 
-enum RobotMode { 
-  ROBOT_MODE_TELEOP = 0,
-  ROBOT_MODE_AUTO_EXCAVATE = 1,
+enum RobotMode {
+  ROBOT_MODE_DISABLED = 0,
+  ROBOT_MODE_TELEOP = 1,
+  ROBOT_MODE_AUTO_EXCAVATE = 2,
 };
 
 class RobotState {
@@ -22,12 +23,11 @@ private:
   int8_t intakeMotor = 0;
   int8_t dumpMotor = 0;
 
-  bool robotEnabled = false;
   RobotMode robotMode = ROBOT_MODE_TELEOP;
 
 public:
 
-  void setEnabled(bool enabled);
+  void setMode(RobotMode enabled);
   void setDrive(int8_t left, int8_t right);
   void setDump(int8_t speed);
   void setIntake(int8_t speed);

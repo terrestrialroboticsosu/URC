@@ -1,4 +1,5 @@
 #include "robotControl.h"
+#include "robotState.h"
 #include "util.h"
 
 #define HEARTBEAT_RATE_MS 1000
@@ -85,7 +86,7 @@ void RobotControl::handleGamepadPacket(GamepadPacket packet) {
 
   if(packet.isLeftBumperPressed()) {
     deploySpeed = DEPLOY_LOWER_SPEED;
-  } else if(packet.issRightBumperPressed()) {
+  } else if(packet.isRightBumperPressed()) {
     deploySpeed = DEPLOY_RAISE_SPEED;
   } else if(packet.getLeftTrigger() > TRIGGER_DEADZONE) { // Lower (loosen)
     deploySpeed = -packet.getLeftTrigger() / 2;
@@ -96,12 +97,12 @@ void RobotControl::handleGamepadPacket(GamepadPacket packet) {
   currentState.setDeploy((int8_t) deploySpeed);
 }
 
-void RobotControl::handleDsHeartbeatPacket(DsHeartbeatPacket packet) {
-  currentState.setEnabled(packet.IsRobotEnabled());
+void RobotControl::handleDsHeartbeatPacket(SerialPacket packet) {
+  currentState.setMode((RobotMode)packet.portions.data[0]);
 }
 
 void RobotControl::disableRobot() {
-  currentState.setEnabled(false);
+  currentState.setMode(ROBOT_MODE_DISABLED);
 }
 
 RobotState& RobotControl::getRobotState() {
