@@ -12,6 +12,10 @@ source venv/bin/activate
 ```
 
 and for windows do
+```
+python -m venv venv
+```
+then this
 
 ```
 .\venv\Scripts\activate
