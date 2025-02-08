@@ -1,4 +1,3 @@
-RobotCode/subprojects
 .vscode/
 DriverStation/__pycache__
 DriverStation/venv
@@ -6,3 +5,7 @@ RobotCode/Calibration/venv
 RobotCode/build
 compile_commands.json
 .cache
+
+# Robot Code Subprojects
+RobotCode/subprojects/*
+!RobotCode/subprojects/asio.wrap

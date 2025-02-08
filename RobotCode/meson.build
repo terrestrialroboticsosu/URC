@@ -16,6 +16,7 @@ proj_sources = [
   'src/robotActuation.cpp',
   'src/robotControl.cpp',
   'src/robotState.cpp',
+  'src/robotSerial.cpp',
   'src/util.cpp'
 ]
 

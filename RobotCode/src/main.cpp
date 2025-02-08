@@ -36,8 +36,8 @@ bool handleDsMessages(DsCommunicator &dsComms, RobotControl &control) {
 
 int main(int argc, char *argv[]) {
     std::cout << "Initializing robot code " << std::endl;
-    DsCommunicator dsComms("/dev/ttyTBD", 115200); // TODO: figure out wtf this should be
-    RobotActuation rp2040("/dev/ttyACM0", 115200);
+    DsCommunicator dsComms("/dev/ttyACM0", 115200);
+    RobotActuation rp2040("/dev/ttyACM1", 115200);
     RobotControl control;
     std::cout << "Robot code initialized!" << std::endl;
 
@@ -65,7 +65,7 @@ int main(int argc, char *argv[]) {
             } else if (currentTime - lastDsMessageRx > DS_TIMEOUT_MS) {
                 std::cout << "DS has not sent a message for " << (currentTime - lastDsMessageRx)
                           << "ms. Killing connection" << std::endl;
-                return 1;
+                lastDsMessageRx = currentTime;
             }
         } else {
             control.disableRobot();
@@ -75,6 +75,7 @@ int main(int argc, char *argv[]) {
         // RP2040 Comms
         control.sendStateToRP2040(&rp2040);
         rp2040.run();
+        dsComms.run();
 
         if (rp2040.isConnected()) {
             SerialPacket packet = {0};
