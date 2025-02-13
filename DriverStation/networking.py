@@ -1,9 +1,9 @@
 import socket
 import threading
 import time
-import pygame
-import struct
 import queue
+import serial
+import serial.threaded
 
 TCP_IP = '192.168.0.10' 
 # TCP_IP = '127.0.0.1'
@@ -11,14 +11,17 @@ TCP_PORT = 2000
 TIMEOUT=1.0
 
 class ConnectionManager: 
-    def __init__(self): 
-        self.network_thread = threading.Thread(target=self.run)
-        self.connected = False
-        self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        self.tx_queue = queue.Queue()
-        self.rx_queue = queue.Queue()
 
-        self.network_thread.start()
+    def __init__(self, port, baud_rate):
+        self.port = port
+        self.baud_rate = baud_rate
+        self.rx_buf = queue.SimpleQueue
+
+        try:
+            self.serial = serial.Serial(port=port, baudrate=baud_rate)
+        except Exception as e:
+            self.serial = None
+            print("Failed to open serial port: {}", e)
 
     def shutdown(self):
         print("Shutting down networking...")
@@ -26,16 +29,44 @@ class ConnectionManager:
         self.network_thread.join()
         print("Shutdown network thread")
 
-    def get_next_packet(self):
-        if self.rx_queue.qsize() < 11:
-            return None
+    def get_next_packet(self): 
+
+        body = []
+        if(self.serial != None):
+            return body
         
-        packet = []
+        packet_length = 13
+        while len(self.rx_buf) > packet_length:
+            syncByte1 = self.rx_buf.get()
+            syncByte2 = self.rx_buf.get()
+            message_type = None
+            if syncByte1 == 0xBE and syncByte2 == 0xEF:
+                message_type = self.rx_buf.get()
+            
+                for i in range(packet_length):
+                    body.append(self.rx_buf.put())
 
-        for _ in range(11):
-            packet.append(self.rx_queue.get())
+                #remove checksum
+                self.rx_buf.empty()
+                print("{} sent {} packet", self.port, message_type)
 
-        return packet
+                return body
+            else:
+                print("{} send incorrect sync byte {}", self.port, syncByte2)
+        
+        return body
+                
+
+    def process_serial(self):
+        if self.serial.in_waiting > 0:
+            bytes_read = self.serial.read_all()
+            if bytes_read != None:
+                for byte in bytes_read:
+                    self.rx_buf.put(byte)
+            
+            
+    def read_heart_beat(self):
+        return True if (self.rx_buf.put() == 0xBE and self.rx_buf.put == 0xEF) else False
 
 
     def run(self):
