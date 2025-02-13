@@ -5,8 +5,8 @@ import pygame
 import struct
 import queue
 
-# TCP_IP = '192.168.0.10' 
-TCP_IP = '127.0.0.1'
+TCP_IP = '192.168.0.10' 
+# TCP_IP = '127.0.0.1'
 TCP_PORT = 2000
 TIMEOUT=1.0
 

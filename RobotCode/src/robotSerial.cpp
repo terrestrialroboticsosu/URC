@@ -1,10 +1,11 @@
 #include "robotSerial.h"
 #include <iostream>
 
-RobotSerial::RobotSerial(std::string port, unsigned int baud_rate) : io(), serial(io) {
+RobotSerial::RobotSerial(std::string port, unsigned int baud_rate) : io(), serial(io), portName(port) {
     try {
         serial.open(port);
         serial.set_option(asio::serial_port_base::baud_rate(baud_rate));
+        std::cout << "Opened port for " << port << std::endl;
     } catch (asio::system_error &e) {
         std::cout << "Failed to open serial port: " << e.what() << std::endl;
     }
@@ -32,9 +33,10 @@ bool RobotSerial::readNextMessage(SerialPacket *packet) {
             // remove checksums
             recvData.pop();
             recvData.pop();
+            std::cout << portName << " sent " << packet->portions.messageType << " packet" << std::endl;
             return true;
         } else {
-            std::cout << "Incorrect sync bytes: " << std::to_string((int)syncByte1) << " and "
+            std::cout << portName << " sent incorrect sync bytes: " << std::to_string((int)syncByte1) << " and "
                       << std::to_string((int)syncByte2) << std::endl;
         }
     }

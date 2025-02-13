@@ -4,9 +4,10 @@
 #include <queue>
 #include <cstdint>
 
-#define SERIAL_MES_LEN 13
 #define SERIAL_RX_BUF_SIZE 128
-#define SERIAL_MES_DATA_LEN 12
+#define SERIAL_MES_DATA_LEN 8
+// +5 for 2 header bytes, 1 message type byte, and 2 checksum bytes
+#define SERIAL_MES_LEN (SERIAL_MES_DATA_LEN + 5)
 
 enum SerialPacketType {
     PACKET_INTAKE_POS = 0x41,
@@ -59,6 +60,7 @@ private:
     std::queue<uint8_t> recvData;
     uint8_t outgoingBytes[13];
     uint8_t rxBuf[SERIAL_RX_BUF_SIZE];
+    std::string portName;
     int positonOfNextOutgoingByte = 0;
     bool byteQueueFull= false;
     bool serialTransmit = false;

@@ -1,6 +1,7 @@
 #include "robotControl.h"
 #include "robotState.h"
 #include "util.h"
+#include <iostream>
 
 #define HEARTBEAT_RATE_MS 1000
 #define MOTOR_UPDATE_RATE_MS 1000

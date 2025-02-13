@@ -3,9 +3,6 @@
 #include <string>
 #include "robotSerial.h"
 
-// Defines length for each packet type
-#define MESS_0x01_LEN 11
-
 struct GamepadPacket { 
     SerialPacket packet;
 
