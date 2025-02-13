@@ -15,11 +15,14 @@ CS = digitalio.DigitalInOut(board.RFM_CS)
 RESET = digitalio.DigitalInOut(board.RFM_RST)
 # Initialise RFM95 radio
 rfm95 = adafruit_rfm9x.RFM9x(board.SPI(), CS, RESET, RADIO_FREQ_MHZ)
+# This is the packet to move the motor
+packet = [0xbe, 0xef, 0x02, 0x01, 0x64, 0x64, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00]
 while True:
-    print("sending")
+    print(bytes(packet))
     time.sleep(0.5)
     # This just sends  the info in a loop to avoid if statement issues
-    rfm95.send(bytes("hello world", "UTF-8"))
+    
+    rfm95.send(bytes(packet))
     button_press = button.events.get()
     if button_press:
         if button_press.pressed:
