@@ -1,6 +1,6 @@
 # Driver Station Code Setup
 
-The driver station for lunabotics is written in python so that first thing you will need to do is [install python](https://www.python.org/) for your operating system.
+The driver station for lunabotics is written in python so that first thing you will need to do is [install python](https://www.python.org/) for your operating system. (Will only work with Python versions from 3.6 - 3.11)
 
 All of the dependencies are configured in a virtual environment so in order to run the code you need to do the following after opening a terminal inside the DriverStation folder in this repository.
 
@@ -15,8 +15,13 @@ and for windows do
 ```
 python -m venv venv
 ```
-then this
 
+or
+```
+py -m venv venv
+```
+
+then this
 ```
 .\venv\Scripts\activate
 ```
