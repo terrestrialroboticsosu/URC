@@ -33,7 +33,6 @@ bool RobotSerial::readNextMessage(SerialPacket *packet) {
             // remove checksums
             recvData.pop();
             recvData.pop();
-            std::cout << portName << " sent " << packet->portions.messageType << " packet" << std::endl;
             return true;
         } else {
             std::cout << portName << " sent incorrect sync bytes: " << std::to_string((int)syncByte1) << " and "
@@ -50,6 +49,8 @@ void RobotSerial::sendHeartbeat(int robotState, bool rp2040Connected) {
     packet.portions.messageType = PACKET_HEARTBEAT;
     packet.portions.data[0] = robotState;
     packet.portions.data[1] = rp2040Connected;
+
+    std::cout << "SEND HEARTBEAT TO DS: robotState=" << robotState << ", rp2040connected=" << rp2040Connected << std::endl;
 
     enqueueMessage(&packet);
 }

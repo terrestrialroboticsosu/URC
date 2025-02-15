@@ -59,13 +59,13 @@ void RobotControl::handleGamepadPacket(GamepadPacket packet) {
   // Drive
   int leftDriveSpeed = packet.getLeftStickY();
   int rightDriveSpeed = packet.getRightStickY();
-  if(packet.isDpadUp()) {
-    leftDriveSpeed = CRAWL_SPEED;
-    rightDriveSpeed = CRAWL_SPEED;
-  } else if (packet.isDpadDown()) {
-    leftDriveSpeed = -CRAWL_SPEED;
-    rightDriveSpeed = -CRAWL_SPEED;
-  }
+  // if(packet.isDpadUp()) {
+  //   leftDriveSpeed = CRAWL_SPEED;
+  //   rightDriveSpeed = CRAWL_SPEED;
+  // } else if (packet.isDpadDown()) {
+  //   leftDriveSpeed = -CRAWL_SPEED;
+  //   rightDriveSpeed = -CRAWL_SPEED;
+  // }
   currentState.setDrive(leftDriveSpeed, rightDriveSpeed);
 
   // Intake
@@ -76,26 +76,26 @@ void RobotControl::handleGamepadPacket(GamepadPacket packet) {
   }
 
   // Dump
-  if(packet.isButtonBPressed()) {
-    currentState.setDump(DUMP_SPEED);
-  } else {
-    currentState.setDump(0);
-  }
+  // if(packet.isButtonBPressed()) {
+  //   currentState.setDump(DUMP_SPEED);
+  // } else {
+  //   currentState.setDump(0);
+  // }
 
   // Deploy
-  int deploySpeed = 0;
+  // int deploySpeed = 0;
 
-  if(packet.isLeftBumperPressed()) {
-    deploySpeed = DEPLOY_LOWER_SPEED;
-  } else if(packet.isRightBumperPressed()) {
-    deploySpeed = DEPLOY_RAISE_SPEED;
-  } else if(packet.getLeftTrigger() > TRIGGER_DEADZONE) { // Lower (loosen)
-    deploySpeed = -packet.getLeftTrigger() / 2;
-  } else if(packet.getRightTrigger() > TRIGGER_DEADZONE) { // Lift (Tighten)
-    deploySpeed = packet.getRightTrigger() / 2 * 3;
-  }
+  // if(packet.isLeftBumperPressed()) {
+  //   deploySpeed = DEPLOY_LOWER_SPEED;
+  // } else if(packet.isRightBumperPressed()) {
+  //   deploySpeed = DEPLOY_RAISE_SPEED;
+  // } else if(packet.getLeftTrigger() > TRIGGER_DEADZONE) { // Lower (loosen)
+  //   deploySpeed = -packet.getLeftTrigger() / 2;
+  // } else if(packet.getRightTrigger() > TRIGGER_DEADZONE) { // Lift (Tighten)
+  //   deploySpeed = packet.getRightTrigger() / 2 * 3;
+  // }
   
-  currentState.setDeploy((int8_t) deploySpeed);
+  // currentState.setDeploy((int8_t) deploySpeed);
 }
 
 void RobotControl::handleDsHeartbeatPacket(SerialPacket packet) {

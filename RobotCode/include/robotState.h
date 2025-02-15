@@ -23,7 +23,7 @@ private:
   int8_t intakeMotor = 0;
   int8_t dumpMotor = 0;
 
-  RobotMode robotMode = ROBOT_MODE_TELEOP;
+  RobotMode robotMode = ROBOT_MODE_DISABLED;
 
 public:
 

@@ -10,7 +10,7 @@
 #include "util.h"
 
 #define DS_HEARTBEAT_RATE_MS 500
-#define DS_TIMEOUT_MS 3000
+#define DS_TIMEOUT_MS 1000
 
 std::atomic<bool> shutdown_flag(false);
 
@@ -28,6 +28,7 @@ bool handleDsMessages(DsCommunicator &dsComms, RobotControl &control) {
         } else if (type == PACKET_GAMEPAD) {
             GamepadPacket gamepadPacket(dsPacket);
             control.handleGamepadPacket(gamepadPacket);
+            std::cout << "Received gamepad packet" << std::endl;
         }
     }
 
@@ -66,6 +67,7 @@ int main(int argc, char *argv[]) {
                 std::cout << "DS has not sent a message for " << (currentTime - lastDsMessageRx)
                           << "ms. Killing connection" << std::endl;
                 lastDsMessageRx = currentTime;
+                control.disableRobot();
             }
         } else {
             control.disableRobot();
