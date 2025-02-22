@@ -1,7 +1,8 @@
 #include "robotSerial.h"
 #include <iostream>
 
-RobotSerial::RobotSerial(std::string port, unsigned int baud_rate) : io(), serial(io), portName(port) {
+RobotSerial::RobotSerial(std::string port, unsigned int baud_rate)
+    : io(), serial(io), portName(port) {
     try {
         serial.open(port);
         serial.set_option(asio::serial_port_base::baud_rate(baud_rate));
@@ -35,7 +36,8 @@ bool RobotSerial::readNextMessage(SerialPacket *packet) {
             recvData.pop();
             return true;
         } else {
-            std::cout << portName << " sent incorrect sync bytes: " << std::to_string((int)syncByte1) << " and "
+            std::cout << portName << " sent incorrect sync bytes: "
+                      << std::to_string((int)syncByte1) << " and "
                       << std::to_string((int)syncByte2) << std::endl;
         }
     }
@@ -50,23 +52,29 @@ void RobotSerial::sendHeartbeat(int robotState, bool rp2040Connected) {
     packet.portions.data[0] = robotState;
     packet.portions.data[1] = rp2040Connected;
 
-    std::cout << "SEND HEARTBEAT TO DS: robotState=" << robotState << ", rp2040connected=" << rp2040Connected << std::endl;
+    std::cout << "SEND HEARTBEAT TO DS: robotState=" << robotState
+              << ", rp2040connected=" << rp2040Connected << std::endl;
 
     enqueueMessage(&packet);
 }
 
-int RobotSerial::sendCurrentQueue() {
+int RobotSerial::sendCurrentQueue(bool checksum) {
     if (byteQueueFull && !serialTransmit) {
         serialTransmit = true;
         serial.async_write_some(asio::buffer(outgoingBytes, SERIAL_MES_LEN),
-                                [this](const asio::error_code &error, std::size_t bytes_transferred) {
+                                [this](const asio::error_code &error,
+                                       std::size_t bytes_transferred) {
                                     sendBytesHandler(error, bytes_transferred);
                                 });
     }
     if (!byteQueueFull && !serialTransmit && !outgoingQueue.empty()) {
         SerialPacket *packet = &outgoingQueue.front();
-        //addChecksum(packet);
-        std::copy(std::begin(packet->packet), std::end(packet->packet), outgoingBytes);
+
+        if (checksum)
+            addChecksum(packet);
+
+        std::copy(std::begin(packet->packet), std::end(packet->packet),
+                  outgoingBytes);
 
         outgoingQueue.pop();
         byteQueueFull = true;
@@ -74,9 +82,10 @@ int RobotSerial::sendCurrentQueue() {
     return 0;
 }
 
-void RobotSerial::sendBytesHandler(const asio::error_code &error, std::size_t bytes_transferred) {
-    // std::cout << "Sent " << unsigned(bytes_transferred) << " bytes" << std::endl;
-    // std::cout << "Error code: " << error.value() << std::endl;
+void RobotSerial::sendBytesHandler(const asio::error_code &error,
+                                   std::size_t bytes_transferred) {
+    // std::cout << "Sent " << unsigned(bytes_transferred) << " bytes" <<
+    // std::endl; std::cout << "Error code: " << error.value() << std::endl;
     positonOfNextOutgoingByte += bytes_transferred;
     if (positonOfNextOutgoingByte >= SERIAL_MES_LEN) {
         byteQueueFull = false;
@@ -93,22 +102,25 @@ void RobotSerial::onRead(const asio::error_code &ec, size_t len) {
 
         memset(rxBuf, 0, SERIAL_RX_BUF_SIZE);
     } else {
-        std::cout << "Failed to read from serial port: " << ec.message() << std::endl;
+        std::cout << "Failed to read from serial port: " << ec.message()
+                  << std::endl;
     }
     this->reading = false;
 }
 
 void RobotSerial::startReading() {
     serial.async_read_some(asio::buffer(this->rxBuf, SERIAL_RX_BUF_SIZE),
-                           [this](const asio::error_code &ec, size_t len) { this->onRead(ec, len); });
+                           [this](const asio::error_code &ec, size_t len) {
+                               this->onRead(ec, len);
+                           });
     this->reading = true;
 }
 
-void RobotSerial::run() {
+void RobotSerial::run(bool checksum) {
     if (io.stopped()) {
         io.reset();
     }
-    sendCurrentQueue();
+    sendCurrentQueue(checksum);
     io.poll();
 
     if (serial.is_open() && !reading) {
@@ -118,7 +130,9 @@ void RobotSerial::run() {
 
 bool RobotSerial::isConnected() { return serial.is_open(); }
 
-void RobotSerial::enqueueMessage(SerialPacket *mess) { outgoingQueue.push(*mess); }
+void RobotSerial::enqueueMessage(SerialPacket *mess) {
+    outgoingQueue.push(*mess);
+}
 
 void RobotSerial::addChecksum(SerialPacket *packet) {
     uint8_t *ptr = packet->packet;
@@ -149,8 +163,9 @@ uint16_t RobotSerial::fletcher16(const uint8_t *data, size_t len) {
 }
 
 int SerialPacket::GetIntakePos() {
-    if(this->portions.messageType != PACKET_INTAKE_POS) {
-        throw new std::runtime_error("packet has incorrect type: must be intake pos");
+    if (this->portions.messageType != PACKET_INTAKE_POS) {
+        throw new std::runtime_error(
+            "packet has incorrect type: must be intake pos");
     }
 
     int pos = portions.data[0];
@@ -162,11 +177,11 @@ int SerialPacket::GetIntakePos() {
 std::string SerialPacket::GetLogMessage() {
     std::string msg;
 
-    for(size_t i = 0; i < SERIAL_MES_DATA_LEN; i++) {
+    for (size_t i = 0; i < SERIAL_MES_DATA_LEN; i++) {
         uint8_t c = portions.data[i];
 
-        if(c != 0) {
-            msg.push_back((char) c);
+        if (c != 0) {
+            msg.push_back((char)c);
         } else {
             break;
         }
@@ -175,4 +190,6 @@ std::string SerialPacket::GetLogMessage() {
     return msg;
 }
 
-SerialPacketType SerialPacket::GetType() { return (SerialPacketType)portions.messageType; }
+SerialPacketType SerialPacket::GetType() {
+    return (SerialPacketType)portions.messageType;
+}

@@ -1,8 +1,8 @@
 #pragma once
 
 #include "asio.hpp"
-#include <queue>
 #include <cstdint>
+#include <queue>
 
 #define SERIAL_RX_BUF_SIZE 128
 #define SERIAL_MES_DATA_LEN 8
@@ -16,12 +16,13 @@ enum SerialPacketType {
     PACKET_GAMEPAD = 0x02,
 };
 
-union SerialPacket
-{
+union SerialPacket {
     uint8_t packet[SERIAL_MES_LEN];
     struct {
-        private: const uint16_t syncBytes = 0xBEEF;
-        public:
+    private:
+        const uint16_t syncBytes = 0xBEEF;
+
+    public:
         uint8_t messageType = 0x00;
         uint8_t data[SERIAL_MES_DATA_LEN] = {0};
         uint8_t checksumHigh;
@@ -34,8 +35,7 @@ union SerialPacket
     std::string GetLogMessage();
 };
 
-class RobotSerial
-{
+class RobotSerial {
 
 public:
     RobotSerial(std::string port, unsigned int baud_rate);
@@ -43,13 +43,14 @@ public:
     void sendHeartbeat(int robotState, bool rp2040Connected);
     bool isConnected();
 
-    int sendCurrentQueue();
-    void run();
-    void sendBytesHandler(const asio::error_code& error, std::size_t bytes_transferred);
-    void enqueueMessage(SerialPacket * mess);
-    void addChecksum(SerialPacket * packet);
+    int sendCurrentQueue(bool checksum);
+    void run(bool checksum);
+    void sendBytesHandler(const asio::error_code &error,
+                          std::size_t bytes_transferred);
+    void enqueueMessage(SerialPacket *mess);
+    void addChecksum(SerialPacket *packet);
     void startReading();
-    void onRead(const asio::error_code& ec, size_t len);
+    void onRead(const asio::error_code &ec, size_t len);
     uint16_t fletcher16(const uint8_t *data, size_t len);
 
 private:
@@ -62,9 +63,7 @@ private:
     uint8_t rxBuf[SERIAL_RX_BUF_SIZE];
     std::string portName;
     int positonOfNextOutgoingByte = 0;
-    bool byteQueueFull= false;
+    bool byteQueueFull = false;
     bool serialTransmit = false;
     bool reading = false;
-
 };
-

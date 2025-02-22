@@ -79,8 +79,8 @@ int main(int argc, char *argv[]) {
 
         // RP2040 Comms
         control.sendStateToRP2040(&rp2040);
-        rp2040.run();
-        dsComms.run();
+        rp2040.run(true);
+        dsComms.run(false);
 
         if (rp2040.isConnected()) {
             SerialPacket packet = {0};
