@@ -8,7 +8,6 @@ extern "C" {
 }
 
 // -- constants --
-#define MESSAGE_TYPE_INTAKE_POSITION 0x41
 #define MESSAGE_TYPE_MOTOR_CMD_ACK 0x60
 #define MESSAGE_TYPE_LOG_MESSAGE 0x61
 #define MESSAGE_TYPE_HEARTBEAT 0x01
@@ -48,20 +47,12 @@ typedef enum error_code {
 
 Adafruit_MCP2515 mcp(PIN_CAN_CS);
 
-const int FRONT_LEFT_MOTOR_PIN = 25;
-const int BACK_LEFT_MOTOR_PIN = 9;
-const int FRONT_RIGHT_MOTOR_PIN = 27;
-const int BACK_RIGHT_MOTOR_PIN = 29;
-const int DEPLOY_MOTOR_PIN = 11;
+const int LEFT_MOTOR_PIN = 25;
+const int RIGHT_MOTOR_PIN = 9;
 
-const int INTAKE_MOTOR_CAN_ID = 9;
-const int DUMP_MOTOR_CAN_ID = 10;
 
-Servo frontLeftMotor;
-Servo backLeftMotor;
-Servo frontRightMotor;
-Servo backRightMotor;
-Servo deployMotor;
+Servo leftMotor;
+Servo rightMotor;
 
 const int PACKET_SIZE = 13;
 const int BUFFER_SIZE = 1;
@@ -72,8 +63,7 @@ int currentIndex = 0;
 const int INDEX_NO_PACKET = -1;
 
 bool SparkMaxEnabled[SPARK_MAX_ID_MAX];
-float intakeSpeed = 0.0;
-float dumpSpeed = 0.0;
+
 
 unsigned long lastPacket;
 unsigned long lastSparkMaxPacket;
@@ -81,8 +71,6 @@ int sparkMaxPacketCount = 0;
 
 unsigned long lastLogHeartbeat = 0;
 unsigned long lastTelemetry;
-
-float intakeAngle = 0;
 
 AMS_5600 ams5600;
 
@@ -98,12 +86,9 @@ void setup() {
   }
   SendLogMessage("CAN OK");
 
-  frontLeftMotor.attach(FRONT_LEFT_MOTOR_PIN);
-  backLeftMotor.attach(BACK_LEFT_MOTOR_PIN);
-  frontRightMotor.attach(FRONT_RIGHT_MOTOR_PIN);
-  backRightMotor.attach(BACK_RIGHT_MOTOR_PIN);
-  deployMotor.attach(DEPLOY_MOTOR_PIN);
-
+  leftMotor.attach(LEFT_MOTOR_PIN);
+  rightMotor.attach(RIGHT_MOTOR_PIN);
+  
   for(int i = 0; i < SPARK_MAX_ID_MAX; i++) {
     SetSparkMaxEnabled(i, false);
   }
@@ -126,27 +111,19 @@ void loop() {
   unsigned long currentTime = millis();
   
   // -- check timings for each packet --
+
+  //TODO: there is no more dump motor
   if(currentTime - lastPacket > ROBOT_TIMEOUT_MS) {
-    intakeSpeed = 0.0;
-    SendSparkMaxSpeed(INTAKE_MOTOR_CAN_ID, 0.0);
-    delay(5);
-    SendSparkMaxSpeed(DUMP_MOTOR_CAN_ID, 0.0);
     SetDriveMotors(0, 0, 0, 0);
-    SetDeployMotor(0);
-    
     for(int i = 0; i < SPARK_MAX_ID_MAX; i++) {
       SetSparkMaxEnabled(i, false);
     }
   }
-
+  //TODO: There is no more dump or intake motor.
   if(currentTime - lastSparkMaxPacket > SPARK_MAX_HEARTBEAT_TIME_MS) {
     if(sparkMaxPacketCount == 0) {
       SendSparkMaxHeartbeat();
-    } else if (sparkMaxPacketCount == 1) {
-      SendSparkMaxSpeed(DUMP_MOTOR_CAN_ID, dumpSpeed);
-    } else if (sparkMaxPacketCount == 2) {
-      SendSparkMaxSpeed(INTAKE_MOTOR_CAN_ID, intakeSpeed);
-    }
+    } 
 
     sparkMaxPacketCount++;
     if(sparkMaxPacketCount > 2) {
@@ -163,7 +140,6 @@ void loop() {
 
   if(currentTime - lastTelemetry > TELEMETRY_RATE_MS) {
     ReadCurrentAngle();
-    SendIntakePosition(); 
     lastTelemetry = currentTime;
   }
 }
@@ -210,15 +186,6 @@ void processPacket()
     case 0x81:
       HandleSetDriverMotorPacket();
       break;
-    case 0x83:
-      HandleSetIntakeSpeedPacket();
-      break;
-    case 0x84: 
-      HandleSetDumpSpeedPacket();
-      break;
-    case 0x82:
-      HandleSetDeployMotorPacket();
-      break;
     case 0xA0:
       SendLogMessage("BOOTLOAD");
       reset_usb_boot(1 << LED_BUILTIN, 0);
@@ -229,44 +196,17 @@ void processPacket()
       SendError(ERROR_CODE_BAD_MSG_TYPE);
   }
 }
-
-void HandleSetDumpSpeedPacket() {
-  int8_t speed = packet[3];
-
-  dumpSpeed = ((float) speed) / 100.0;
-  SendMotorCommandAck();
-  SetSparkMaxEnabled(DUMP_MOTOR_CAN_ID, true);
-}
-
-void HandleSetIntakeSpeedPacket() {
-  uint8_t speed = packet[3];
-
-  intakeSpeed = -((float) speed) / 100.0;
-  SendMotorCommandAck();
-  SetSparkMaxEnabled(INTAKE_MOTOR_CAN_ID, true);
-}
-
 void HandleSetDriverMotorPacket()
 {
   SendMotorCommandAck();
   SetDriveMotors((int8_t)packet[3], (int8_t)packet[4], (int8_t)packet[5], (int8_t)packet[6]);
 }
 
-void SetDriveMotors(int8_t frontLeft, int8_t frontRight, int8_t backLeft, int8_t backRight) {
-  frontLeftMotor.writeMicroseconds(map(frontLeft, -100, 100, 1000, 2000));
-  frontRightMotor.writeMicroseconds(map(-frontRight, -100, 100, 1000, 2000));
-  backLeftMotor.writeMicroseconds(map(backLeft, -100, 100, 1000, 2000));
-  backRightMotor.writeMicroseconds(map(-backRight, -100, 100, 1000, 2000));
+void SetDriveMotors(int8_t Left, int8_t Right) {
+  leftMotor.writeMicroseconds(map(left, -100, 100, 1000, 2000));
+  rightMotor.writeMicroseconds(map(right, -100, 100, 1000, 2000));
 }
 
-void HandleSetDeployMotorPacket() {
-  SendMotorCommandAck();
-  SetDeployMotor((int8_t) packet[3]);
-}
-
-void SetDeployMotor(int8_t speed) {
-  deployMotor.writeMicroseconds(map(-speed, -100, 100, 1000, 2000));
-}
 
 inline bool verifyChecksum()
 {
@@ -391,20 +331,4 @@ void SendError(error_code_t code) {
   SendLogMessage(msg);
 }
 
-void ReadCurrentAngle()
-{
-  int rawAngle;
 
-  if(ams5600.tryGetRawAngle(&rawAngle)) {
-    intakeAngle = rawAngle * 0.087;
-  }
-}
-
-void SendIntakePosition() {
-  int angleInt = intakeAngle * 100;
-  uint8_t data[SERIAL_PAYLOAD_SIZE] = {0};
-  data[0] = angleInt & 0xFF;
-  data[1] = (angleInt >> 8) & 0xFF;
-
-  SendPacket(MESSAGE_TYPE_INTAKE_POSITION, data);
-}
