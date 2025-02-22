@@ -11,7 +11,7 @@ class ConnectionManager:
         self.network_thread = threading.Thread(target=self.run)
         self.connected = False
         # async serial
-        self.ser = serial.Serial('/dev/ttyACM0', 115200)
+        self.ser = serial.Serial('/dev/ttyACM0', 115200, timeout=1)
 
         # NOTE: This may be deprecated
         self.tx_queue = queue.Queue()
@@ -54,7 +54,7 @@ class ConnectionManager:
             self.tx_queue.queue.clear()
 
     def read_data(self):
-        data = self.ser.read(128)
+        data = self.ser.read(14)
         if data:
             for byte in data:
                 self.rx_queue.put(byte)
