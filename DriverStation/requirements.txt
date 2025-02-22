@@ -1,4 +1,6 @@
 PyOpenGL
 pygame
-imgui[glfw]
+imgui[pygame]
 psutil
+pyserial
+numpy

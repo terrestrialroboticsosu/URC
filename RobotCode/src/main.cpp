@@ -1,12 +1,12 @@
+#include <atomic>
 #include <iostream>
 #include <string>
-#include <atomic>
 
 #include "driverStation.h"
 #include "robotActuation.h"
 #include "robotControl.h"
-#include "robotState.h"
 #include "robotSerial.h"
+#include "robotState.h"
 #include "util.h"
 
 #define DS_HEARTBEAT_RATE_MS 500
@@ -22,6 +22,7 @@ bool handleDsMessages(DsCommunicator &dsComms, RobotControl &control) {
     while (dsComms.readNextMessage(&dsPacket)) {
         anyMessageRecv = true;
         SerialPacketType type = dsPacket.GetType();
+        std::cout << "Recieved a serial packet" << std::endl;
 
         if (type == PACKET_HEARTBEAT) {
             control.handleDsHeartbeatPacket(dsPacket);
@@ -57,14 +58,16 @@ int main(int argc, char *argv[]) {
         // Driver Station Comms
         if (dsComms.isConnected()) {
             if (currentTime - lastSentDsHearbeat > DS_HEARTBEAT_RATE_MS) {
-                dsComms.sendHeartbeat(control.getRobotState().getRobotMode(), rp2040.isConnected());
+                dsComms.sendHeartbeat(control.getRobotState().getRobotMode(),
+                                      rp2040.isConnected());
                 lastSentDsHearbeat = currentTime;
             }
 
             if (handleDsMessages(dsComms, control)) {
                 lastDsMessageRx = getUnixTimeMs();
             } else if (currentTime - lastDsMessageRx > DS_TIMEOUT_MS) {
-                std::cout << "DS has not sent a message for " << (currentTime - lastDsMessageRx)
+                std::cout << "DS has not sent a message for "
+                          << (currentTime - lastDsMessageRx)
                           << "ms. Killing connection" << std::endl;
                 lastDsMessageRx = currentTime;
                 control.disableRobot();
@@ -86,14 +89,16 @@ int main(int argc, char *argv[]) {
                     std::string msg = packet.GetLogMessage();
 
                     std::cout << "RP2040 LOG: " << msg << std::endl;
-                //} else if (packet.GetType() == PACKET_INTAKE_POS) {
-                    //int pos = packet.GetIntakePos();
+                    //} else if (packet.GetType() == PACKET_INTAKE_POS) {
+                    // int pos = packet.GetIntakePos();
 
-                    //std::cout << "INTAKE POS: " << pos << std::endl;
-                    //dsComms.sendIntakePos(pos); 
-                    // intake does not exist anymore rn this code will be removed soon
+                    // std::cout << "INTAKE POS: " << pos << std::endl;
+                    // dsComms.sendIntakePos(pos);
+                    //  intake does not exist anymore rn this code will be
+                    //  removed soon
                 } else {
-                    std::cout << "Received unknown message type from RP2040: " << +packet.GetType() << std::endl;
+                    std::cout << "Received unknown message type from RP2040: "
+                              << +packet.GetType() << std::endl;
                 }
             }
         }

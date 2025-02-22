@@ -9,21 +9,24 @@ WINDOW_TITLE = "Driver Station"
 DISPLAY_MODE_OPTIONS = OPENGL | DOUBLEBUF | RESIZABLE
 FONT_SIZE = 18
 
+
 class Window:
     def __init__(self):
         self.window_size = DEFAULT_WINDOW_SIZE
-        # Setup Window 
+        # Setup Window
         pygame.init()
-        self.screen = pygame.display.set_mode(self.window_size, DISPLAY_MODE_OPTIONS)
+        self.screen = pygame.display.set_mode(
+            self.window_size, DISPLAY_MODE_OPTIONS)
         pygame.display.set_caption(WINDOW_TITLE)
         print("Window created")
 
         # Setup OpenGL
         pygame.display.gl_set_attribute(GL_DEPTH_SIZE, 24)
         pygame.display.gl_set_attribute(GL_STENCIL_SIZE, 8)
-        pygame.display.gl_set_attribute(GL_CONTEXT_PROFILE_MASK, GL_CONTEXT_PROFILE_CORE)
+        pygame.display.gl_set_attribute(
+            GL_CONTEXT_PROFILE_MASK, GL_CONTEXT_PROFILE_CORE)
         pygame.display.gl_set_attribute(GL_CONTEXT_MAJOR_VERSION, 3)
-        pygame.display.gl_set_attribute(GL_CONTEXT_MINOR_VERSION, 3) 
+        pygame.display.gl_set_attribute(GL_CONTEXT_MINOR_VERSION, 3)
         print("OpenGL initialized")
 
         # Setup Imgui
@@ -48,17 +51,18 @@ class Window:
                 state.shutdown()
             elif event.type == VIDEORESIZE:
                 self.window_size = event.w, event.h
-                self.screen = pygame.display.set_mode(self.window_size, DISPLAY_MODE_OPTIONS)
+                self.screen = pygame.display.set_mode(
+                    self.window_size, DISPLAY_MODE_OPTIONS)
                 self.io.display_size = self.window_size
 
                 print(f"Resize to ({self.window_size})")
-        
+
         self.renderer.process_inputs()
 
     def render(self, state, gui):
         imgui.new_frame()
         with imgui.font(self.font):
-            gui.render(state, self.window_size) 
+            gui.render(state, self.window_size)
         imgui.render()
 
         gl.glClearColor(0, 0, 0, 1)
