@@ -10,7 +10,6 @@
 #define SERIAL_MES_LEN (SERIAL_MES_DATA_LEN + 5)
 
 enum SerialPacketType {
-    PACKET_INTAKE_POS = 0x41,
     PACKET_LOG = 0x61,
     PACKET_HEARTBEAT = 0x01,
     PACKET_GAMEPAD = 0x02,

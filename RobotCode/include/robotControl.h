@@ -12,9 +12,7 @@ private:
     // Variables to keep track of how long since we have sent something to the RP2040
     uint64_t lastHeartbeat = 0;
     uint64_t lastDriveCmd = 0;
-    uint64_t lastDumpCmd = 0;
-    uint64_t lastIntakeCmd = 0;
-    uint64_t lastDeployCmd = 0;
+
 
 public:
 
