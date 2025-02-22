@@ -1,6 +1,6 @@
 PyOpenGL
 pygame
-imgui[pygame]
+imgui[full]
 psutil
 pyserial
 numpy

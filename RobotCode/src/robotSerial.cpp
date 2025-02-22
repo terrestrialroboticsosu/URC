@@ -65,7 +65,7 @@ int RobotSerial::sendCurrentQueue() {
     }
     if (!byteQueueFull && !serialTransmit && !outgoingQueue.empty()) {
         SerialPacket *packet = &outgoingQueue.front();
-        addChecksum(packet);
+        //addChecksum(packet);
         std::copy(std::begin(packet->packet), std::end(packet->packet), outgoingBytes);
 
         outgoingQueue.pop();
