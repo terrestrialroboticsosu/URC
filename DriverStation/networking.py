@@ -13,7 +13,6 @@ class ConnectionManager:
         # async serial
         self.ser = serial.Serial('/dev/ttyACM0', 115200, timeout=1)
 
-        # NOTE: This may be deprecated
         self.tx_queue = queue.Queue()
         self.rx_queue = queue.Queue()
 

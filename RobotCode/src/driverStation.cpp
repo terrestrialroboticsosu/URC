@@ -1,8 +1,8 @@
 #include "driverStation.h"
 #include <asio.hpp>
 
-DsCommunicator::DsCommunicator(std::string port, unsigned int baud_rate) : RobotSerial(port, baud_rate) {
-}
+DsCommunicator::DsCommunicator(std::string port, unsigned int baud_rate)
+    : RobotSerial(port, baud_rate) {}
 
 GamepadPacket::GamepadPacket(SerialPacket _packet) : packet(_packet) {}
 
