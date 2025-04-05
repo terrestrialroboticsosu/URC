@@ -1,5 +1,6 @@
 # URC Software
 Software for the [Ohio State Terrestrial Robotics](https://org.osu.edu/firstrobotics/urc/).
+Software for the [Ohio State Terrestrial Robotics](https://org.osu.edu/firstrobotics/urc/).
 
 ## Architecture
 
