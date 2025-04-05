@@ -19,3 +19,9 @@ Radio: contains the code to run the RP2040 RFM Feather radio board.
 HAL: contains the code to run on the RP2040 Feather board.
 RobotCode: contains the code which runs on the raspberry pi.
 TestScripts: Utility scripts which can be used for testing the robot's software.
+Documentation: contains relevant documentation files
+DriverStation: contains the code to run the driver station
+Radio: contains the code to run the RP2040 RFM Feather radio board. 
+HAL: contains the code to run on the RP2040 Feather board.
+RobotCode: contains the code which runs on the raspberry pi.
+TestScripts: Utility scripts which can be used for testing the robot's software.
