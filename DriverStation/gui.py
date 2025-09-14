@@ -1,3 +1,4 @@
+import math
 import imgui
 from enum import Enum
 
@@ -209,6 +210,43 @@ class Gui:
             center_x + robot_width / 2, top_y + robot_height,
             chassis_col, 5 # rounded corners
         )
+
+        # --- Draw Compass Arrow ---
+        # 1. Calculate the overall motion vector from wheel speeds
+        # Forward/backward component (Y-axis of motion)
+        vy = left_speed + right_speed
+        # Turning component (X-axis of motion)
+        vx = right_speed - left_speed
+
+        # 2. Only draw the arrow if the robot is moving
+        if vx != 0 or vy != 0:
+            # 3. Calculate the angle of the motion vector.
+            # We use atan2(x, -y) because the GUI's Y-axis points down.
+            angle = math.atan2(vx, -vy) # Angle in radians
+            
+            # Arrow properties
+            arrow_len = 50
+            arrow_width = 15 # The width of the arrow's base
+            arrow_center_x = center_x
+            arrow_center_y = top_y + robot_height / 2
+            arrow_col = imgui.get_color_u32_rgba(0.9, 0.9, 0.1, 1) # A nice yellow
+
+            # 4. Calculate the three points of the triangle using trigonometry
+            # The tip of the arrow
+            tip_x = arrow_center_x + arrow_len * math.sin(angle)
+            tip_y = arrow_center_y - arrow_len * math.cos(angle)
+
+            # The two base points of the arrow head. These are calculated by finding
+            # a vector perpendicular to the direction vector.
+            perp_angle = angle + math.pi / 2 # 90 degrees from the direction
+            base1_x = arrow_center_x + arrow_width * math.sin(perp_angle)
+            base1_y = arrow_center_y - arrow_width * math.cos(perp_angle)
+            
+            base2_x = arrow_center_x - arrow_width * math.sin(perp_angle)
+            base2_y = arrow_center_y + arrow_width * math.cos(perp_angle)
+
+            # 5. Draw the filled triangle
+            draw_list.add_triangle_filled(tip_x, tip_y, base1_x, base1_y, base2_x, base2_y, arrow_col)
         
         # --- Helper function to draw wheels and arrows ---
         def draw_wheel_and_arrow(x, y, speed):
@@ -280,3 +318,4 @@ class Gui:
 
         if SHOW_IMGUI_TEST_WINDOW:
             imgui.show_test_window()
+            
