@@ -106,6 +106,7 @@ class Gui:
         imgui.text(f"Intake angle: {telemetry.get_intake_pos()}")
         imgui.text(f"Intake height: ")
         imgui.text("")
+        # FROM OLD ROBOT for picking up and dumping things
         imgui.text("Dump speed: XXX")
         imgui.text("Dump torque: XXX")
         imgui.text("")
@@ -163,6 +164,99 @@ class Gui:
                     imgui.same_line()
                     if imgui.button("Cancel"):
                         self.current_action = None
+
+    def draw_robot(self, ds_state):
+        """
+            Robot GUI to show the speed and direction of each wheel
+            Initial Goal:
+                Have a robot animation, arrows on each motor detailing direction,
+                arrows switch direction based of the speed (+/-), speed of motors
+                next to each motor (there's 2 motors total)
+            
+            Stretch Goal:
+                Have an arrow in front of the robot showing the direction based on the
+                combined direction and speed of the 2 motors.
+
+            TO-DO: look into the HAL and find the individual wheel speed
+        """
+
+        # Get motor speeds from the telemetry object
+        telemetry = ds_state.get_telemetry()
+        left_speed = telemetry.get_left_motor_speed()
+        right_speed = telemetry.get_right_motor_speed()
+
+        # Get the draw list for custom rendering
+        draw_list = imgui.get_window_draw_list()
+        
+        # Window position for relative drawing
+        pos = imgui.get_cursor_screen_pos()
+        win_width = imgui.get_window_width()
+        
+        # Robot dimensions and positioning
+        robot_width = 150
+        robot_height = 200
+        wheel_width = 30
+        wheel_height = 60
+        
+        center_x = pos.x + win_width / 2
+        top_y = pos.y + 50
+        
+        # --- Draw Robot Body ---
+        # A simple rectangle for the chassis
+        chassis_col = imgui.get_color_u32_rgba(0.5, 0.5, 0.5, 1)
+        draw_list.add_rect_filled(
+            center_x - robot_width / 2, top_y,
+            center_x + robot_width / 2, top_y + robot_height,
+            chassis_col, 5 # rounded corners
+        )
+        
+        # --- Helper function to draw wheels and arrows ---
+        def draw_wheel_and_arrow(x, y, speed):
+            # Wheel
+            wheel_col = imgui.get_color_u32_rgba(0.2, 0.2, 0.2, 1)
+            draw_list.add_rect_filled(x, y, x + wheel_width, y + wheel_height, wheel_col, 3)
+
+            # Arrow Color
+            arrow_col = imgui.get_color_u32_rgba(0.1, 1, 0.1, 1) # Green for forward
+
+            # Arrow direction and position
+            arrow_center_y = y + wheel_height / 2
+            arrow_x = x + wheel_width / 2
+            
+            if speed > 0: # Forward
+                p1 = (arrow_x, arrow_center_y - 15)
+                p2 = (arrow_x - 7, arrow_center_y)
+                p3 = (arrow_x + 7, arrow_center_y)
+                draw_list.add_triangle_filled(p1.x, p1.y, p2.x, p2.y, p3.x, p3.y, arrow_col)
+            elif speed < 0: # Backward
+                arrow_col = imgui.get_color_u32_rgba(1, 0.1, 0.1, 1) # Red for backward
+                p1 = (arrow_x, arrow_center_y + 15)
+                p2 = (arrow_x - 7, arrow_center_y)
+                p3 = (arrow_x + 7, arrow_center_y)
+                draw_list.add_triangle_filled(p1.x, p1.y, p2.x, p2.y, p3.x, p3.y, arrow_col)
+            
+            # Speed text
+            text_col = imgui.get_color_u32_rgba(1, 1, 1, 1)
+            imgui.set_cursor_screen_pos((x, y + wheel_height + 5))
+            imgui.text(f"{speed}")
+
+        # --- Draw Left Wheel ---
+        left_wheel_x = center_x - robot_width / 2 - wheel_width - 10
+        left_wheel_y = top_y + (robot_height - wheel_height) / 2
+        draw_wheel_and_arrow(left_wheel_x, left_wheel_y, left_speed)
+        imgui.set_cursor_screen_pos((left_wheel_x - 10, left_wheel_y - 20))
+        imgui.text("Left Motor")
+        
+        # --- Draw Right Wheel ---
+        right_wheel_x = center_x + robot_width / 2 + 10
+        right_wheel_y = top_y + (robot_height - wheel_height) / 2
+        draw_wheel_and_arrow(right_wheel_x, right_wheel_y, right_speed)
+        imgui.set_cursor_screen_pos((right_wheel_x - 10, right_wheel_y - 20))
+        imgui.text("Right Motor")
+
+        
+
+
                 
 
 
@@ -179,6 +273,7 @@ class Gui:
         imgui.set_next_window_position(0, 0)
         imgui.begin("Telemetry", flags=imgui.WINDOW_NO_COLLAPSE | imgui.WINDOW_NO_RESIZE | imgui.WINDOW_NO_MOVE)
         self.draw_telemetry(state)
+        self.draw_robot(state)
         imgui.end()
 
         self.draw_confirmation_box(window_width, window_height)

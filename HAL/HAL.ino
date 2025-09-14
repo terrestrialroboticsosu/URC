@@ -11,6 +11,7 @@ extern "C" {
 #define MESSAGE_TYPE_MOTOR_CMD_ACK 0x60
 #define MESSAGE_TYPE_LOG_MESSAGE 0x61
 #define MESSAGE_TYPE_HEARTBEAT 0x01
+#define MESSAGE_TYPE_TELEMETRY 0x70
 
 #define CAN_ID_MANUFACTURER_REV 5
 #define CAN_ID_DEVICE_TYPE_MOTOR_CONTROLLER 2
@@ -53,6 +54,9 @@ const int RIGHT_MOTOR_PIN = 9;
 
 Servo leftMotor;
 Servo rightMotor;
+
+int8_t currentLeftSpeed = 0;
+int8_t currentRightSpeed = 0; 
 
 const int PACKET_SIZE = 13;
 const int BUFFER_SIZE = 1;
@@ -140,6 +144,7 @@ void loop() {
 
   if(currentTime - lastTelemetry > TELEMETRY_RATE_MS) {
     ReadCurrentAngle();
+    SendTelemetry();
     lastTelemetry = currentTime;
   }
 }
@@ -203,6 +208,10 @@ void HandleSetDriverMotorPacket()
 }
 
 void SetDriveMotors(int8_t Left, int8_t Right) {
+  // Store the speeds
+  currentLeftSpeed = left;
+  currentRightSpeed = right;
+
   leftMotor.writeMicroseconds(map(left, -100, 100, 1000, 2000));
   rightMotor.writeMicroseconds(map(right, -100, 100, 1000, 2000));
 }
@@ -329,6 +338,20 @@ void SendError(error_code_t code) {
   snprintf(msg, SERIAL_PAYLOAD_SIZE, "ERR %d", code);
 
   SendLogMessage(msg);
+}
+
+void SendTelemetry() {
+  uint8_t data[SERIAL_PAYLOAD_SIZE] = {0};
+  
+  // Pack motor speeds into the payload
+  data[0] = currentLeftSpeed;
+  data[1] = currentRightSpeed;
+  
+  // You could add other data here, like the encoder angle
+  // float angle = ams5600.getRawAngle();
+  // memcpy(&data[2], &angle, sizeof(angle));
+  
+  SendPacket(MESSAGE_TYPE_TELEMETRY, data);
 }
 
 

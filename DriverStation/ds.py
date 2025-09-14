@@ -44,6 +44,8 @@ class RobotTelemetry:
         self.rp2040_connected = False
         self.intake_pos = DATA_UNKNOWN
         self.robot_mode = DATA_UNKNOWN
+        self.left_motor_speed = 0 
+        self.right_motor_speed = 0
 
     def set_robot_mode(self, mode):
         self.robot_mode = mode
@@ -68,6 +70,12 @@ class RobotTelemetry:
 
     def get_intake_pos(self):
         return self.intake_pos
+    
+    def get_left_motor_speed(self):
+        return self.left_motor_speed
+
+    def get_right_motor_speed(self):
+        return self.right_motor_speed
 
 class GamepadState: 
     def __init__(self):
@@ -341,11 +349,23 @@ class RobotCommunicator:
 
     def handle_packet(self, packet, ds_state : DriverStationState):
         packet_type = packet[0]
+        telemetry = ds_state.get_telemetry()
 
         if packet_type == 0x01: # Heartbeat
             ds_state.get_telemetry().set_robot_enabled(packet[1] != 0)
             ds_state.get_telemetry().set_rp2040_connected(packet[2] != 0)
             ds_state.get_telemetry().set_robot_mode(RobotMode(packet[3]))
+        elif packet_type == 0x70: # Motor Telemetry Packet
+            # Unpack left speed from the first payload byte (packet[1])
+            # The value is a signed 8-bit int (-128 to 127)
+            left_speed = int.from_bytes([packet[1]], byteorder='little', signed=True)
+            
+            # Unpack right speed from the second payload byte (packet[2])
+            right_speed = int.from_bytes([packet[2]], byteorder='little', signed=True)
+            
+            # Update the telemetry object directly
+            telemetry.left_motor_speed = left_speed
+            telemetry.right_motor_speed = right_speed
         elif packet_type == 0x03:
             pos = packet[1] | (packet[2] << 8) | (packet[3] << 16) | (packet[3] << 24) 
             pos /= 100
