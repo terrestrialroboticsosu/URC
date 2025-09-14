@@ -5,4 +5,4 @@ Naveen Kamath
 Jaysal Patel
 Neal Xu
 Nikhil Dhayagude
-Carter Russell 2
+Carter Russell
