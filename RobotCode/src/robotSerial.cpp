@@ -162,18 +162,6 @@ uint16_t RobotSerial::fletcher16(const uint8_t *data, size_t len) {
     return (c1 << 8 | c0);
 }
 
-int SerialPacket::GetIntakePos() {
-    if (this->portions.messageType != PACKET_INTAKE_POS) {
-        throw new std::runtime_error(
-            "packet has incorrect type: must be intake pos");
-    }
-
-    int pos = portions.data[0];
-    pos |= (portions.data[1] << 8);
-
-    return pos;
-}
-
 std::string SerialPacket::GetLogMessage() {
     std::string msg;
 
