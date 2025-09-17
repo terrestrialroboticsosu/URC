@@ -111,12 +111,16 @@ class Gui:
         imgui.text("Dump speed: XXX")
         imgui.text("Dump torque: XXX")
         imgui.text("")
+        imgui.text(f"Autonomous mode: {telemetry.get_autonomous_mode()}")
+        imgui.text("")
 
         gamepad = ds_state.get_gamepad()
         left_stick = gamepad.get_left_stick()
         right_stick = gamepad.get_right_stick()
         left_trigger = gamepad.get_left_trigger()
         right_trigger = gamepad.get_right_trigger()
+        left_speed = telemetry.get_left_motor_speed()
+        right_speed = telemetry.get_right_motor_speed()
 
         imgui.text("Gamepad:")
         imgui.text(f"Left Stick: {left_stick[0]:.2f}, {left_stick[1]:.2f}")
@@ -148,25 +152,6 @@ class Gui:
             self.led_indicator("  LEFT", gamepad.get_left_bumper())
             self.led_indicator(" RIGHT", gamepad.get_right_bumper())
 
-
-    def draw_confirmation_box(self, window_width, window_height):
-        if self.current_action != None:
-            imgui.open_popup("Action Confirmation")
-
-            imgui.set_next_window_size(CONFIRM_POPOP_WIDTH, CONFIRM_POPUP_HEIGHT)
-            imgui.set_next_window_position((window_width / 2) - (CONFIRM_POPOP_WIDTH  / 2), (window_height / 2) - (CONFIRM_POPUP_HEIGHT / 2))
-            with imgui.begin_popup_modal("Action Confirmation", flags=POPUP_IMGUI_FLAGS) as select_popup:
-                if select_popup.opened:
-                    imgui.text("Are you sure:")
-                    imgui.text("")
-                    if imgui.button(self.current_action.text):
-                        self.current_action.execute()
-                        self.current_action = None
-                    imgui.same_line()
-                    if imgui.button("Cancel"):
-                        self.current_action = None
-
-    def draw_robot(self, ds_state):
         """
             Robot GUI to show the speed and direction of each wheel
             Initial Goal:
@@ -180,12 +165,7 @@ class Gui:
 
             TO-DO: look into the HAL and find the individual wheel speed
         """
-
-        # Get motor speeds from the telemetry object
-        telemetry = ds_state.get_telemetry()
-        left_speed = telemetry.get_left_motor_speed()
-        right_speed = telemetry.get_right_motor_speed()
-
+        
         # Get the draw list for custom rendering
         draw_list = imgui.get_window_draw_list()
         
@@ -194,14 +174,14 @@ class Gui:
         win_width = imgui.get_window_width()
         
         # Robot dimensions and positioning
-        robot_width = 150
-        robot_height = 200
-        wheel_width = 30
-        wheel_height = 60
+        robot_width = 75
+        robot_height = 100
+        wheel_width = 15
+        wheel_height = 30
         
         center_x = pos.x + win_width / 2
         top_y = pos.y + 50
-        
+
         # --- Draw Robot Body ---
         # A simple rectangle for the chassis
         chassis_col = imgui.get_color_u32_rgba(0.5, 0.5, 0.5, 1)
@@ -282,7 +262,7 @@ class Gui:
         left_wheel_x = center_x - robot_width / 2 - wheel_width - 10
         left_wheel_y = top_y + (robot_height - wheel_height) / 2
         draw_wheel_and_arrow(left_wheel_x, left_wheel_y, left_speed)
-        imgui.set_cursor_screen_pos((left_wheel_x - 10, left_wheel_y - 20))
+        imgui.set_cursor_screen_pos((left_wheel_x - 60, left_wheel_y - 20))
         imgui.text("Left Motor")
         
         # --- Draw Right Wheel ---
@@ -292,10 +272,23 @@ class Gui:
         imgui.set_cursor_screen_pos((right_wheel_x - 10, right_wheel_y - 20))
         imgui.text("Right Motor")
 
-        
 
+    def draw_confirmation_box(self, window_width, window_height):
+        if self.current_action != None:
+            imgui.open_popup("Action Confirmation")
 
-                
+            imgui.set_next_window_size(CONFIRM_POPOP_WIDTH, CONFIRM_POPUP_HEIGHT)
+            imgui.set_next_window_position((window_width / 2) - (CONFIRM_POPOP_WIDTH  / 2), (window_height / 2) - (CONFIRM_POPUP_HEIGHT / 2))
+            with imgui.begin_popup_modal("Action Confirmation", flags=POPUP_IMGUI_FLAGS) as select_popup:
+                if select_popup.opened:
+                    imgui.text("Are you sure:")
+                    imgui.text("")
+                    if imgui.button(self.current_action.text):
+                        self.current_action.execute()
+                        self.current_action = None
+                    imgui.same_line()
+                    if imgui.button("Cancel"):
+                        self.current_action = None
 
 
     def render(self, state, window_size):
@@ -311,7 +304,7 @@ class Gui:
         imgui.set_next_window_position(0, 0)
         imgui.begin("Telemetry", flags=imgui.WINDOW_NO_COLLAPSE | imgui.WINDOW_NO_RESIZE | imgui.WINDOW_NO_MOVE)
         self.draw_telemetry(state)
-        self.draw_robot(state)
+        #self.draw_robot(state)
         imgui.end()
 
         self.draw_confirmation_box(window_width, window_height)
