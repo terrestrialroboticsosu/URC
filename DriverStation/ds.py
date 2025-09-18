@@ -46,6 +46,7 @@ class RobotTelemetry:
         self.robot_mode = DATA_UNKNOWN
         self.left_motor_speed = 0 
         self.right_motor_speed = 0
+        self.autonomous_mode = False
 
     def set_robot_mode(self, mode):
         self.robot_mode = mode
@@ -76,6 +77,9 @@ class RobotTelemetry:
 
     def get_right_motor_speed(self):
         return self.right_motor_speed
+    
+    def get_autonomous_mode(self):
+        return self.autonomous_mode
 
 class GamepadState: 
     def __init__(self):
@@ -99,6 +103,7 @@ class GamepadState:
         self.right_bumper = False
         self.left_trigger = 0.0
         self.right_trigger = 0.0
+        self.autonomous_mode = False
 
     def is_connected(self):
         return self.connected
@@ -179,6 +184,9 @@ class GamepadState:
     
     def get_dpad_right(self):
         return self.dpad_right
+    
+    def autonomous_mode(self):
+        return self.autonomous_mode
 
 class DriverStationState: 
     def __init__(self):
@@ -355,6 +363,7 @@ class RobotCommunicator:
             ds_state.get_telemetry().set_robot_enabled(packet[1] != 0)
             ds_state.get_telemetry().set_rp2040_connected(packet[2] != 0)
             ds_state.get_telemetry().set_robot_mode(RobotMode(packet[3]))
+            # THIS IS A PLACEHOLDER VALUE
         elif packet_type == 0x70: # Motor Telemetry Packet
             # Unpack left speed from the first payload byte (packet[1])
             # The value is a signed 8-bit int (-128 to 127)
@@ -370,6 +379,9 @@ class RobotCommunicator:
             pos = packet[1] | (packet[2] << 8) | (packet[3] << 16) | (packet[3] << 24) 
             pos /= 100
             ds_state.get_telemetry().set_intake_pos(pos)
+            # Bad placeholder code
+        elif packet_type == 0x02:
+            telemetry.autonomous_mode = False
         else:
             print(f"Unknown packet type from robot: {packet_type}")
 
