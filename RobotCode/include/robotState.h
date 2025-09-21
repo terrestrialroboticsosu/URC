@@ -17,7 +17,7 @@
 enum RobotMode {
   ROBOT_MODE_DISABLED = 0,      /**< The robot is disabled and will not move. */
   ROBOT_MODE_TELEOP = 1,        /**< The robot is in teleoperated (manual) mode. */
-  ROBOT_MODE_AUTO_EXCAVATE = 2, /**< The robot is in an autonomous excavation mode. */
+  ROBOT_MODE_AUTO = 2,          /**< The robot is in an autonomous driving mode. */
 };
 
 /**

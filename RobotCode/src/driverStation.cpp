@@ -23,6 +23,6 @@ bool GamepadPacket::isDpadUp() { return packet.portions.data[7]; }
 
 bool GamepadPacket::isDpadDown() { return packet.portions.data[8]; }
 
-bool GamepadPacket::isLeftBumperPressed() { return packet.portions.data[9]; }
+bool GamepadPacket::isLeftBumperPressed() { return packet.portions.data[9]; } //TODO: verify if needed
 
-bool GamepadPacket::isRightBumperPressed() { return packet.portions.data[10]; }
+bool GamepadPacket::isRightBumperPressed() { return packet.portions.data[10]; } //TODO: verify if neededs
