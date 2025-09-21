@@ -47,6 +47,7 @@ class RobotTelemetry:
         self.left_motor_speed = 0 
         self.right_motor_speed = 0
         self.autonomous_mode = False
+        self.at_target = False
 
     def set_robot_mode(self, mode):
         self.robot_mode = mode
@@ -80,6 +81,9 @@ class RobotTelemetry:
     
     def get_autonomous_mode(self):
         return self.autonomous_mode
+    
+    def at_target(self):
+        return self.at_target
 
 class GamepadState: 
     def __init__(self):
@@ -104,6 +108,7 @@ class GamepadState:
         self.left_trigger = 0.0
         self.right_trigger = 0.0
         self.autonomous_mode = False
+        self.at_target = False
 
     def is_connected(self):
         return self.connected
@@ -187,6 +192,9 @@ class GamepadState:
     
     def autonomous_mode(self):
         return self.autonomous_mode
+
+    def at_target(self):
+        return self.at_target
 
 class DriverStationState: 
     def __init__(self):
@@ -382,6 +390,8 @@ class RobotCommunicator:
             # Bad placeholder code
         elif packet_type == 0x02:
             telemetry.autonomous_mode = False
+        elif packet_type == 0x0F:
+            telemetry.at_target = False
         else:
             print(f"Unknown packet type from robot: {packet_type}")
 
