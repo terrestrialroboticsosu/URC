@@ -26,7 +26,7 @@ class Gui:
     def __init__(self):
         self.current_action = None
         # New: Local state to store the current position of the arm's joint sliders.
-        self.arm_joint_angles = [0.0] * 5
+        self.arm_joint_angles = [0.0] * 6
         pass
     
     def led_indicator(self, text, enabled):
@@ -76,7 +76,6 @@ class Gui:
                     if imgui.button("Enable Robot"):
                         state.enable_robot()
 
-                self.button_with_popup("Run Auto Dig", state.run_auto_dig)
                 self.button_with_popup("Restart Code", state.restart_robot_code)
                 self.button_with_popup("Reboot Pi", state.reboot_pi)
                 self.button_with_popup("Reboot RP2040", state.reboot_rp2040)
@@ -84,8 +83,6 @@ class Gui:
             imgui.same_line(spacing=50)
 
             with imgui.begin_group():
-                imgui.text(f"LINKAGE: {state.get_linkage_state()}")
-                self.button_with_popup("Deploy Linkage", state.deploy_intake)
                 self.button_with_popup("Set Manual Control", state.manual_control_intake)
                 if imgui.button("Reset Encoder"):
                     self.current_action = GuiAction('Reset Encoder', state.reset_intake_encoder)
@@ -108,14 +105,10 @@ class Gui:
         telemetry = ds_state.get_telemetry()
         imgui.text(f"Robot enabled: {telemetry.is_robot_enabled()}")
         imgui.text(f"Robot mode: {telemetry.get_robot_mode()}")
-        imgui.text("")
-        imgui.text(f"Intake angle: {telemetry.get_intake_pos()}")
-        imgui.text(f"Intake height: ")
+        
         imgui.text("")
         # FROM OLD ROBOT for picking up and dumping things
-        imgui.text("Dump speed: XXX")
-        imgui.text("Dump torque: XXX")
-        imgui.text("")
+        
         imgui.text(f"Autonomous mode: {telemetry.get_autonomous_mode()}")
         imgui.text("")
         
@@ -124,7 +117,10 @@ class Gui:
         arm_pos = telemetry.get_arm_end_effector_pos()
         imgui.text(f"End-Effector Position (x,y,z): [{arm_pos[0]:.2f}, {arm_pos[1]:.2f}, {arm_pos[2]:.2f}]")
         for i, angle in enumerate(telemetry.get_arm_joint_angles()):
-            imgui.text(f"Joint {i+1} Angle: {angle:.2f} deg")
+            if i == 5: 
+                imgui.text(f"Joint 6 Position: {angle:.2f} cm")
+            else:
+                imgui.text(f"Joint {i+1} Angle: {angle:.2f} deg")
 
         gamepad = ds_state.get_gamepad()
         left_stick = gamepad.get_left_stick()
@@ -134,6 +130,7 @@ class Gui:
         left_speed = telemetry.get_left_motor_speed()
         right_speed = telemetry.get_right_motor_speed()
 
+        imgui.text("")
         imgui.text("Gamepad:")
         imgui.text(f"Left Stick: {left_stick[0]:.2f}, {left_stick[1]:.2f}")
         imgui.text(f"Right Stick: {right_stick[0]:.2f}, {right_stick[1]:.2f}")
@@ -317,18 +314,21 @@ class Gui:
         # New: Sliders for each joint
         for i in range(5):
             changed, self.arm_joint_angles[i] = imgui.slider_float(
-                f"Joint {i} Angle", self.arm_joint_angles[i], -180.0, 180.0, "%.1f deg")
+                f"Joint {i+1} Angle", self.arm_joint_angles[i], -180.0, 180.0, "%.1f deg")
             if changed:
                 # You would add logic here to send the new joint angle to the robot
                 pass
+            
+        changed, self.arm_joint_angles[5] = imgui.slider_float(
+            "Joint 6 Position", self.arm_joint_angles[5], 0.0, 20.0, "%.1f cm")
+        if changed:
+            pass
         
         imgui.text("")
         imgui.text("Predefined Positions")
-        if imgui.button("Stow Arm"):
-            state.stow_arm()
+        self.button_with_popup("Stow Arm", state.stow_arm)
         imgui.same_line()
-        if imgui.button("Calibrate Arm"):
-            state.calibrate_arm()
+        self.button_with_popup("Calibrate Arm", state.calibrate_arm)
             
         imgui.end()
     

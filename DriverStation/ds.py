@@ -50,7 +50,7 @@ class RobotTelemetry:
         self.autonomous_mode = False 
         self.arrived_at_target = False 
         # A list to hold the angles of the 5 arm joints.
-        self.arm_joint_angles = [0.0] * 5  
+        self.arm_joint_angles = [0.0] * 6  
         # Stores the X, Y, Z position of the arm's end-effector.
         self.arm_end_effector_pos = [0.0, 0.0, 0.0]  
         
@@ -91,7 +91,7 @@ class RobotTelemetry:
     # New: Arm-specific setters and getters
     def set_arm_joint_angles(self, angles):
         """Sets the angles for the 5 arm joints."""
-        if len(angles) == 5:
+        if len(angles) == 6:
             self.arm_joint_angles = angles
     
     def get_arm_joint_angles(self):
