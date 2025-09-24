@@ -1,4 +1,4 @@
-import networking
+import networking 
 import window
 import gui
 from enum import Enum
@@ -44,10 +44,17 @@ class RobotTelemetry:
         self.rp2040_connected = False
         self.intake_pos = DATA_UNKNOWN
         self.robot_mode = DATA_UNKNOWN
+        ##
         self.left_motor_speed = 0 
-        self.right_motor_speed = 0
-        self.autonomous_mode = False
-
+        self.right_motor_speed = 0 
+        self.autonomous_mode = False 
+        self.arrived_at_target = False 
+        # A list to hold the angles of the 5 arm joints.
+        self.arm_joint_angles = [0.0] * 5  
+        # Stores the X, Y, Z position of the arm's end-effector.
+        self.arm_end_effector_pos = [0.0, 0.0, 0.0]  
+        
+        
     def set_robot_mode(self, mode):
         self.robot_mode = mode
 
@@ -80,6 +87,25 @@ class RobotTelemetry:
     
     def get_autonomous_mode(self):
         return self.autonomous_mode
+    
+    # New: Arm-specific setters and getters
+    def set_arm_joint_angles(self, angles):
+        """Sets the angles for the 5 arm joints."""
+        if len(angles) == 5:
+            self.arm_joint_angles = angles
+    
+    def get_arm_joint_angles(self):
+        """Returns the current angles of the 5 arm joints."""
+        return self.arm_joint_angles
+    
+    def set_arm_end_effector_pos(self, pos):
+        """Sets the X, Y, Z position of the end-effector."""
+        if len(pos) == 3:
+            self.arm_end_effector_pos = pos
+            
+    def get_arm_end_effector_pos(self):
+        """Returns the end-effector's position."""
+        return self.arm_end_effector_pos
 
 class GamepadState: 
     def __init__(self):
@@ -104,6 +130,7 @@ class GamepadState:
         self.left_trigger = 0.0
         self.right_trigger = 0.0
         self.autonomous_mode = False
+
 
     def is_connected(self):
         return self.connected
@@ -184,9 +211,6 @@ class GamepadState:
     
     def get_dpad_right(self):
         return self.dpad_right
-    
-    def autonomous_mode(self):
-        return self.autonomous_mode
 
 class DriverStationState: 
     def __init__(self):
@@ -252,6 +276,15 @@ class DriverStationState:
     def shutdown(self):
         self.running = False
 
+    # New: Arm control methods, triggered by buttons in the GUI
+    def calibrate_arm(self):
+        """Placeholder for sending a calibrate arm command to the robot."""
+        print("Calibrating arm...")
+
+    def stow_arm(self):
+        """Placeholder for sending a stow arm command to the robot."""
+        print("Stowing arm...")
+    
 class DriverStationInput:
     def __init__(self, ds_state):
         self.joystick = None
@@ -305,6 +338,7 @@ class RobotCommunicator:
     def __init__(self):
         self.last_gamepad_packet = 0
         self.last_heartbeat = 0
+        self.last_arm_cmd = 0; # New: To track the last time an arm command was sent.
         pass
 
     def send_gamepad_packet(self, gamepad : GamepadState, connection : networking.ConnectionManager):
@@ -355,6 +389,12 @@ class RobotCommunicator:
         connection.send_packet(packet)
         self.last_heartbeat = time.time()
 
+    def send_arm_cmd(self, joint_angles, connection):
+        """Sends a packet with the target joint angles for the arm."""
+        # Note: This is a placeholder. You'll need to define a new packet type for arm commands
+        # and pack the joint angle data into it.
+        pass
+
     def handle_packet(self, packet, ds_state : DriverStationState):
         packet_type = packet[0]
         telemetry = ds_state.get_telemetry()
@@ -363,10 +403,13 @@ class RobotCommunicator:
             ds_state.get_telemetry().set_robot_enabled(packet[1] != 0)
             ds_state.get_telemetry().set_rp2040_connected(packet[2] != 0)
             ds_state.get_telemetry().set_robot_mode(RobotMode(packet[3]))
-            # THIS IS A PLACEHOLDER VALUE
         elif packet_type == 0x70: # Motor Telemetry Packet
+            # old --> pos = packet[1] | (packet[2] << 8) | (packet[3] << 16) | (packet[3] << 24) 
+            # old --> pos /= 100
+            # old --> ds_state.get_telemetry().set_intake_pos(pos)
+            
+            # This block is now corrected to handle motor telemetry, which was previously misplaced.
             # Unpack left speed from the first payload byte (packet[1])
-            # The value is a signed 8-bit int (-128 to 127)
             left_speed = int.from_bytes([packet[1]], byteorder='little', signed=True)
             
             # Unpack right speed from the second payload byte (packet[2])
@@ -379,9 +422,16 @@ class RobotCommunicator:
             pos = packet[1] | (packet[2] << 8) | (packet[3] << 16) | (packet[3] << 24) 
             pos /= 100
             ds_state.get_telemetry().set_intake_pos(pos)
-            # Bad placeholder code
         elif packet_type == 0x02:
             telemetry.autonomous_mode = False
+        # New: Arm telemetry packet handler
+        elif packet_type == 0x05: # This is a new message type for arm telemetry.
+            # Assuming 5 joint angles are sent as floats (4 bytes each)
+            joint_angles = list(struct.unpack('5f', bytes(packet[3:23])))
+            telemetry.set_arm_joint_angles(joint_angles)
+            # Assuming end-effector pose (x, y, z) are sent as floats
+            end_effector_pos = list(struct.unpack('3f', bytes(packet[23:35])))
+            telemetry.set_arm_end_effector_pos(end_effector_pos)
         else:
             print(f"Unknown packet type from robot: {packet_type}")
 
@@ -391,7 +441,11 @@ class RobotCommunicator:
 
         if time.time() - self.last_heartbeat > 0.1:
             self.send_heartbeat(ds_state, connection)
-
+            
+        # New: Send arm commands if needed (e.g., if a slider was moved)
+        if time.time() - self.last_arm_cmd > 0.1:
+            # This is a placeholder for checking if arm command needs to be sent.
+            pass
         packet = connection.get_next_packet()
         while packet is not None:
             self.handle_packet(packet, ds_state)
