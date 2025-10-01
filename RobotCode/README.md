@@ -7,7 +7,7 @@ cd RobotCode
 sh install.sh
 ```
 
-Then to compile and execute the code open the PiCode directory and run the following commands:
+Then to compile and execute the code, open the RobotCode directory and run the following commands:
 
 ```
 meson setup build
