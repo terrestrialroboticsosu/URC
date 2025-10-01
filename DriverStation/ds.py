@@ -54,7 +54,7 @@ class RobotTelemetry:
         # Stores the X, Y, Z position of the arm's end-effector.
         self.arm_end_effector_pos = [0.0, 0.0, 0.0]  
         
-        
+
     def set_robot_mode(self, mode):
         self.robot_mode = mode
 
@@ -88,6 +88,9 @@ class RobotTelemetry:
     def get_autonomous_mode(self):
         return self.autonomous_mode
     
+    def at_target(self):
+        return self.at_target
+
     # New: Arm-specific setters and getters
     def set_arm_joint_angles(self, angles):
         """Sets the angles for the 5 arm joints."""
@@ -106,6 +109,7 @@ class RobotTelemetry:
     def get_arm_end_effector_pos(self):
         """Returns the end-effector's position."""
         return self.arm_end_effector_pos
+
 
 class GamepadState: 
     def __init__(self):
@@ -130,6 +134,7 @@ class GamepadState:
         self.left_trigger = 0.0
         self.right_trigger = 0.0
         self.autonomous_mode = False
+        self.at_target = False
 
 
     def is_connected(self):
@@ -211,6 +216,9 @@ class GamepadState:
     
     def get_dpad_right(self):
         return self.dpad_right
+
+    def at_target(self):
+        return self.at_target
 
 class DriverStationState: 
     def __init__(self):
@@ -424,6 +432,9 @@ class RobotCommunicator:
             ds_state.get_telemetry().set_intake_pos(pos)
         elif packet_type == 0x02:
             telemetry.autonomous_mode = False
+
+        elif packet_type == 0x0F:
+            telemetry.at_target = False
         # New: Arm telemetry packet handler
         elif packet_type == 0x05: # This is a new message type for arm telemetry.
             # Assuming 5 joint angles are sent as floats (4 bytes each)
@@ -432,6 +443,7 @@ class RobotCommunicator:
             # Assuming end-effector pose (x, y, z) are sent as floats
             end_effector_pos = list(struct.unpack('3f', bytes(packet[23:35])))
             telemetry.set_arm_end_effector_pos(end_effector_pos)
+
         else:
             print(f"Unknown packet type from robot: {packet_type}")
 
