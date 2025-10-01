@@ -3,7 +3,7 @@ import threading
 import time
 import queue
 
-SERIAL_PORT = "/dev/ttyACM0" 
+SERIAL_PORT = "/dev/ttyACM0" #linux port will be different from windows
 BAUD_RATE = 115200
 TIMEOUT = 1.0
 

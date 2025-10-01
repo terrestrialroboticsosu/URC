@@ -21,44 +21,44 @@ void RobotControl::sendStateToRP2040(RobotActuation *rp2040) {
     lastHeartbeat = currentTime;
   }
 
-  bool frontLeftChange = currentState.getDriveFrontLeft() != lastStateSent.getDriveFrontLeft();
-  bool frontRightChange = currentState.getDriveFrontLeft() != lastStateSent.getDriveFrontLeft();
-  bool backLeftChange = currentState.getDriveFrontLeft() != lastStateSent.getDriveFrontLeft();
-  bool backRightChange = currentState.getDriveFrontLeft() != lastStateSent.getDriveFrontLeft();
+  // bool frontLeftChange = currentState.getDriveFrontLeft() != lastStateSent.getDriveFrontLeft();
+  // bool frontRightChange = currentState.getDriveFrontLeft() != lastStateSent.getDriveFrontLeft();
+  // bool backLeftChange = currentState.getDriveFrontLeft() != lastStateSent.getDriveFrontLeft();
+  // bool backRightChange = currentState.getDriveFrontLeft() != lastStateSent.getDriveFrontLeft();
 
-  if (frontLeftChange || frontRightChange || backLeftChange || backRightChange ||
-      currentTime - this->lastDriveCmd > MOTOR_UPDATE_RATE_MS) {
-    std::cout << "Send Drive to RP2040 (FL=" << +currentState.getDriveFrontLeft() << ", FR=" << +currentState.getDriveFrontLeft()
-              << ", BL=" << +currentState.getDriveFrontLeft() << ", BR=" << +currentState.getDriveFrontLeft() << ")" << std::endl;
-    rp2040->sendDriveMotors(currentState.getDriveFrontLeft(), currentState.getDriveFrontRight(), currentState.getDriveBackLeft(), currentState.getDriveBackRight());
-    lastDriveCmd = currentTime;
-  }
+  // if (frontLeftChange || frontRightChange || backLeftChange || backRightChange ||
+  //     currentTime - this->lastDriveCmd > MOTOR_UPDATE_RATE_MS) {
+  //   std::cout << "Send Drive to RP2040 (FL=" << +currentState.getDriveFrontLeft() << ", FR=" << +currentState.getDriveFrontLeft()
+  //             << ", BL=" << +currentState.getDriveFrontLeft() << ", BR=" << +currentState.getDriveFrontLeft() << ")" << std::endl;
+  //   rp2040->sendDriveMotors(currentState.getDriveFrontLeft(), currentState.getDriveFrontRight(), currentState.getDriveBackLeft(), currentState.getDriveBackRight());
+  //   lastDriveCmd = currentTime;
+  // }
 
-  if(currentState.getIntake() != lastStateSent.getIntake() || currentTime - lastIntakeCmd > MOTOR_UPDATE_RATE_MS) {
-    std::cout << "Send Intake to RP2040: " << +currentState.getIntake() << std::endl; 
-    rp2040->sendIntakeMotor(currentState.getIntake());
-    lastIntakeCmd = currentTime;
-  }
+  // if(currentState.getIntake() != lastStateSent.getIntake() || currentTime - lastIntakeCmd > MOTOR_UPDATE_RATE_MS) {
+  //   std::cout << "Send Intake to RP2040: " << +currentState.getIntake() << std::endl; 
+  //   rp2040->sendIntakeMotor(currentState.getIntake());
+  //   lastIntakeCmd = currentTime;
+  // }
 
-  if(currentState.getDump() != lastStateSent.getDump() || currentTime - lastDumpCmd > MOTOR_UPDATE_RATE_MS) {
-    std::cout << "Send Dump to RP2040: " << +currentState.getDump() << std::endl; 
-    rp2040->sendDumpMotor(currentState.getDump());
-    lastDumpCmd = currentTime;
-  }
+  // if(currentState.getDump() != lastStateSent.getDump() || currentTime - lastDumpCmd > MOTOR_UPDATE_RATE_MS) {
+  //   std::cout << "Send Dump to RP2040: " << +currentState.getDump() << std::endl; 
+  //   rp2040->sendDumpMotor(currentState.getDump());
+  //   lastDumpCmd = currentTime;
+  // }
 
-  if(currentState.getDeploy() != lastStateSent.getDeploy() || currentTime - lastDeployCmd > MOTOR_UPDATE_RATE_MS) {
-    std::cout << "Send Deploy to RP2040: " << +currentState.getDeploy() << std::endl; 
-    rp2040->sendDeployControl(currentState.getDeploy());
-    lastDeployCmd = currentTime;
-  }
+  // if(currentState.getDeploy() != lastStateSent.getDeploy() || currentTime - lastDeployCmd > MOTOR_UPDATE_RATE_MS) {
+  //   std::cout << "Send Deploy to RP2040: " << +currentState.getDeploy() << std::endl; 
+  //   rp2040->sendDeployControl(currentState.getDeploy());
+  //   lastDeployCmd = currentTime;
+  // }
 
-  lastStateSent = currentState;
+  // lastStateSent = currentState;
 }
 
 void RobotControl::handleGamepadPacket(GamepadPacket packet) {
   // Drive
-  int leftDriveSpeed = packet.getLeftStickY();
-  int rightDriveSpeed = packet.getRightStickY();
+  // int leftDriveSpeed = packet.getLeftStickY();
+  // int rightDriveSpeed = packet.getRightStickY();
   // if(packet.isDpadUp()) {
   //   leftDriveSpeed = CRAWL_SPEED;
   //   rightDriveSpeed = CRAWL_SPEED;
@@ -66,14 +66,14 @@ void RobotControl::handleGamepadPacket(GamepadPacket packet) {
   //   leftDriveSpeed = -CRAWL_SPEED;
   //   rightDriveSpeed = -CRAWL_SPEED;
   // }
-  currentState.setDrive(leftDriveSpeed, rightDriveSpeed);
+  // currentState.setDrive(leftDriveSpeed, rightDriveSpeed);
 
   // Intake
-  if(packet.isButtonAPressed()) {
+  /*if(packet.isButtonAPressed()) {
     currentState.setIntake(INTAKE_SPEED);
   } else {
     currentState.setIntake(0);
-  }
+  }*/
 
   // Dump
   // if(packet.isButtonBPressed()) {
