@@ -24,6 +24,8 @@ enum SerialPacketType {
     PACKET_LOG = 0x61,         /**< A log message packet. */
     PACKET_HEARTBEAT = 0x01,   /**< A heartbeat packet to maintain connection. */
     PACKET_GAMEPAD = 0x02,     /**< A packet containing gamepad/controller data. */
+    PACKET_ARMCOORD = 0x03,
+    PACKET_ARMCONTROL = 0x04,
 };
 
 /**
