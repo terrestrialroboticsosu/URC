@@ -18,8 +18,7 @@ proj_sources = [
   'src/robotControl.cpp',
   'src/robotState.cpp',
   'src/robotSerial.cpp',
-  'src/util.cpp',
-  'src/robotArm.cpp'
+  'src/util.cpp'
 ]
 
 asio = subproject('asio')

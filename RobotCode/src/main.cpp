@@ -31,6 +31,10 @@ bool handleDsMessages(DsCommunicator &dsComms, RobotControl &control) {
             control.handleGamepadPacket(gamepadPacket);
             std::cout << "Received gamepad packet" << std::endl;
         }
+         else {
+             // Handle packets from the base station that aren't expected here
+             std::cout << "Received unexpected radio message type: " << +type << std::endl;
+        }
     }
 
     return anyMessageRecv;
@@ -89,13 +93,6 @@ int main(int argc, char *argv[]) {
                     std::string msg = packet.GetLogMessage();
 
                     std::cout << "RP2040 LOG: " << msg << std::endl;
-                    //} else if (packet.GetType() == PACKET_INTAKE_POS) {
-                    // int pos = packet.GetIntakePos();
-
-                    // std::cout << "INTAKE POS: " << pos << std::endl;
-                    // dsComms.sendIntakePos(pos);
-                    //  intake does not exist anymore rn this code will be
-                    //  removed soon
                 } else {
                     std::cout << "Received unknown message type from RP2040: "
                               << +packet.GetType() << std::endl;
