@@ -1,26 +1,38 @@
-# Rpi Setup and Compile
+# RobotCode Project
 
-If you want to build this code on your own raspberry pi or linux machine for testing be sure to install the following dependencies first.
+A C++ project for robot arm kinematics, using the Orocos-KDL library for calculations.
 
-```
-cd RobotCode
-sh install.sh
-```
+## Dependencies
 
-Then to compile and execute the code, open the RobotCode directory and run the following commands:
+* **CMake** (version 3.15 or higher)
+* **A C++17 compatible compiler** (e.g., g++, clang++)
 
-```
-meson setup build
-meson compile -C build
-cd build
-./urcbot
-```
+The Orocos-KDL library is included locally in the `lib/` directory as a pre-compiled shared object (`.so`) and does not need to be installed system-wide.
 
-If you use clangd as your LSP the compile_commands.json will be output to the build folder after compilation
+## How to Build
 
-## Adding new source files
+The project uses an "out-of-source" build pattern, which keeps the main directory clean.
 
-When contributing new source files make sure to place all headers into the include folder and all C++ files into the src folder.
+1.  **Create a build directory:**
+    ```bash
+    mkdir build
+    ```
 
-Then to ensure that the files are properly compiled add all new C++ sources to the ```proj_sources``` field in the meson.build file.
+2.  **Configure the project:**
+    (This command tells CMake to look for the source in the current directory (`.`) and configure the build in the `build/` directory.)
+    ```bash
+    cmake -S . -B build
+    ```
 
+3.  **Compile the project:**
+    (This runs the actual compilation process.)
+    ```bash
+    cmake --build build
+    ```
+
+## How to Run
+
+After a successful build, the executable will be located in the `build` directory.
+
+```bash
+./build/RobotCode

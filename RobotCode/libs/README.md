@@ -1,1 +1,0 @@
-The external library folder for the robot code. Contains the Kinematic Dynamic Library for inverse kinematics.
