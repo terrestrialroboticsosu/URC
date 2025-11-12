@@ -70,6 +70,8 @@ void setup() {
         Serial.println("Failed to set frequency");
         while (1);
     }
+    // Changed 5-10km range to 1-3km
+    rf95.setModemConfig(RH_RF95::Bw125Cr45Sf9);
 
     rf95.setTxPower(23, false);
     Serial.println("LoRa setup complete");
