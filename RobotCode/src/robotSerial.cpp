@@ -46,16 +46,24 @@ bool RobotSerial::readNextMessage(SerialPacket *packet) {
 }
 
 void RobotSerial::sendHeartbeat(int robotState, bool rp2040Connected) {
-    SerialPacket packet = {0xBE, 0xEF};
+    uint8_t data[2] = { static_cast<uint8_t>(robotState), static_cast<uint8_t>(rp2040Connected) };
+    uint8_t packetLen = sizeof(data) + 1; // messageType + data
+    uint8_t messageType = PACKET_HEARTBEAT;
 
-    packet.portions.messageType = PACKET_HEARTBEAT;
-    packet.portions.data[0] = robotState;
-    packet.portions.data[1] = rp2040Connected;
+    // Build packet like ds.py expects
+    std::vector<uint8_t> payload;
+    payload.push_back(messageType);
+    payload.insert(payload.end(), data, data + sizeof(data));
 
-    std::cout << "SEND HEARTBEAT TO DS: robotState=" << robotState
-              << ", rp2040connected=" << rp2040Connected << std::endl;
+    // Add header and CRC like ds.py
+    uint16_t crc = gen_crc16(payload); // you’ll need to add the same gen_crc16 function as in ds.py
+    std::vector<uint8_t> fullPacket = {0xBE, 0xEF, static_cast<uint8_t>(packetLen & 0xFF),
+                                       static_cast<uint8_t>((packetLen >> 8) & 0xFF)};
+    fullPacket.insert(fullPacket.end(), payload.begin(), payload.end());
+    fullPacket.push_back(crc & 0xFF);
+    fullPacket.push_back((crc >> 8) & 0xFF);
 
-    enqueueMessage(&packet);
+    serial.write_some(asio::buffer(fullPacket.data(), fullPacket.size()));
 }
 
 int RobotSerial::sendCurrentQueue(bool checksum) {
