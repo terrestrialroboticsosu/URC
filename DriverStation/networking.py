@@ -43,44 +43,12 @@ class ConnectionManager:
             self.serial_conn.close()
         print("Serial connection closed")
 
-    # --- CRC & packet framing ---
-    def gen_crc16(self, data):
-        out = 0
-        bits_read = 0
-        byte_idx = 0
-        size = len(data)
-        while size > 0:
-            bit_flag = out >> 15
-            out = (out << 1) & 0xFFFF
-            out |= (data[byte_idx] >> bits_read) & 1
-            bits_read += 1
-            if bits_read > 7:
-                bits_read = 0
-                byte_idx += 1
-                size -= 1
-            if bit_flag:
-                out ^= 0xA001
-        for _ in range(16):
-            bit_flag = out >> 15
-            out = (out << 1) & 0xFFFF
-            if bit_flag:
-                out ^= 0xA001
-        crc = 0
-        i = 0x8000
-        j = 0x0001
-        while i:
-            if i & out:
-                crc |= j
-            i >>= 1
-            j <<= 1
-        return crc
-
+    # --- Packet framing (no CRC) ---
     def make_packet(self, data_bytes):
+        """Only add header, no CRC."""
         msg_len = len(data_bytes)
         header = [0xBE, 0xEF, msg_len & 0xFF, (msg_len >> 8) & 0xFF]
-        crc = self.gen_crc16(data_bytes)
-        crc_bytes = [crc & 0xFF, (crc >> 8) & 0xFF]
-        return bytes(header + list(data_bytes) + crc_bytes)
+        return bytes(header + list(data_bytes))
 
     # --- Packet sending ---
     def send_packet(self, payload):
@@ -97,7 +65,6 @@ class ConnectionManager:
         else:
             print("send_packet: serial not open")
 
-
     def tx_loop(self):
         MIN_SEND_INTERVAL = 1.0  # 1 second between packets
         last_send_time = 0
@@ -108,32 +75,24 @@ class ConnectionManager:
             except queue.Empty:
                 continue
 
-            # Wait until MIN_SEND_INTERVAL has passed since last packet
             now = time.time()
             elapsed = now - last_send_time
             if elapsed < MIN_SEND_INTERVAL:
-                wait_time = MIN_SEND_INTERVAL - elapsed
-                print(f"tx_loop: waiting {wait_time:.2f}s before sending next packet")
-                time.sleep(wait_time)
+                time.sleep(MIN_SEND_INTERVAL - elapsed)
 
             if self.serial_conn and self.serial_conn.is_open:
                 try:
                     self.serial_conn.write(packet)
-                    self.serial_conn.flush()  # force send immediately
+                    self.serial_conn.flush()
                     last_send_time = time.time()
-                    # print the packet bytes as hex
                     print(f"tx_loop: sent packet ({len(packet)} bytes): {packet.hex()}")
                 except serial.SerialException:
-                    print("tx_loop: write failed, requeueing packet")
                     self.tx_queue.put(packet)
                     self.connected = False
                     time.sleep(0.05)
             else:
                 self.tx_queue.put(packet)
                 time.sleep(0.05)
-
-
-
 
     # --- Packet receiving ---
     def read_data(self):
@@ -147,19 +106,17 @@ class ConnectionManager:
             self.connected = False
 
     def get_next_packet(self):
-        if self.rx_queue.qsize() < 6:
+        if self.rx_queue.qsize() < 4:
             return None
         first = self.rx_queue.queue[0]
         second = self.rx_queue.queue[1]
         if first != 0xBE or second != 0xEF:
             self.rx_queue.get()
             return None
-        if self.rx_queue.qsize() < 4:
-            return None
         length_L = self.rx_queue.queue[2]
         length_H = self.rx_queue.queue[3]
         msg_len = length_L | (length_H << 8)
-        total_len = 4 + msg_len + 2
+        total_len = 4 + msg_len
         if self.rx_queue.qsize() < total_len:
             return None
         packet = [self.rx_queue.get() for _ in range(total_len)]
