@@ -8,6 +8,7 @@ import struct
 import camera
 import signal
 import sys
+import time
 
 DATA_UNKNOWN="---"
 JOYSTICK_DEADZONE=0.1
@@ -371,16 +372,16 @@ class RobotCommunicator:
             0x01,
             int(ds_state.is_robot_enabled()), 0, 0, 0, 0, 0, 0, 0, 0, 0
         )
-        connection.send_packet(packet)
+        #connection.send_packet(packet)
         print("sent heartbeat")
 
     def update(self, ds_state, connection):
-        import time
+         
         now = time.time()
-        if now - self.last_send_time >= 1.0:  # every 1 second
+        if now - self.last_send_time >= 0.5 :
+            self.last_send_time = now  # ← Set this IMMEDIATELY before sending
             self.send_gamepad_packet(ds_state.get_gamepad(), connection)
-            self.send_heartbeat(ds_state, connection)
-            self.last_send_time = now
+
 
 class DriverStation:
     def __init__(self):

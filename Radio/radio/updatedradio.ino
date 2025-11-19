@@ -12,6 +12,7 @@
 
 RH_RF95 rf95(RFM95_CS, RFM95_INT);
 
+
 uint16_t gen_crc16(const uint8_t *data, uint16_t size) {
     uint16_t out = 0;
     int bits_read = 0, bit_flag;
@@ -53,6 +54,8 @@ void setup() {
     digitalWrite(RFM95_RST, HIGH);
     delay(10);
 
+    
+
     if (!rf95.init()) {
         while (1);
     }
@@ -60,7 +63,7 @@ void setup() {
     if (!rf95.setFrequency(RF95_FREQ)) {
         while (1);
     }
-
+    rf95.setModemConfig(RH_RF95::Bw125Cr45Sf9);
     rf95.setTxPower(23, false);
 }
 
