@@ -1,14 +1,16 @@
 # --- Project settings ---
 cmake_minimum_required(VERSION 3.15)
 project(RobotCodeCMake)
+
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
-# This setting is specific to neovim users
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
+# --- Find External Dependencies ---
+# KDL requires Eigen. This finds it on the system (Ubuntu/Fedora usually install it to /usr/include/eigen3)
+find_package(Eigen3 3.3 REQUIRED NO_MODULE)
+
 # --- Define Executable ---
-# Create an executable target named 'RobotCode'
-# from the source files in the 'src' directory
 add_executable(RobotCode
     src/armTester.cpp
     src/driverStation.cpp
@@ -22,7 +24,6 @@ add_executable(RobotCode
 )
 
 # --- Include Directories ---
-# Target where to find header files
 target_include_directories(RobotCode PRIVATE
     # Project headers
     ${CMAKE_CURRENT_SOURCE_DIR}/include
@@ -30,16 +31,17 @@ target_include_directories(RobotCode PRIVATE
     # Library headers for Orocos-KDL
     ${CMAKE_CURRENT_SOURCE_DIR}/lib/orocos-kdl/include
 
-    # Library headers for Asio (header-only)
+    # Library headers for Asio
     ${CMAKE_CURRENT_SOURCE_DIR}/lib/asio-1.30-2/include
 )
 
 # --- Link Libraries ---
-# Tell 'RobotCode' to link against the pre-compiled Orocos-KDL
-# shared library (.so file) located in your 'lib' folder
 target_link_libraries(RobotCode PRIVATE
-    # We only need to link Orocos-KDL. Asio is header-only.
+    # Link the vendored KDL library
     ${CMAKE_CURRENT_SOURCE_DIR}/lib/orocos-kdl/lib/liborocos-kdl.so.1.5.2
+
+    # Link Eigen (Header only, but this sets up the include paths correctly)
+    Eigen3::Eigen
 )
 
 # Optional: Set RPATH to find the .so at runtime
