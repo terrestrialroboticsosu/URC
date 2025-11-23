@@ -63,7 +63,7 @@ void setup() {
     if (!rf95.setFrequency(RF95_FREQ)) {
         while (1);
     }
-    rf95.setModemConfig(RH_RF95::Bw125Cr45Sf9);
+    
     rf95.setTxPower(23, false);
 }
 

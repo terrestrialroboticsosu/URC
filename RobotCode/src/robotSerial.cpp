@@ -15,31 +15,82 @@ RobotSerial::RobotSerial(std::string port, unsigned int baud_rate)
     }
 }
 
-// Read next message
-bool RobotSerial::readNextMessage(SerialPacket *packet) {
-    if (!serial.is_open()) return false;
+    // Read next message
+    bool RobotSerial::readNextMessage(SerialPacket *packet) {
+        if (!serial.is_open()) return false;
 
-    while (recvData.size() >= SERIAL_MES_LEN) {
-        uint8_t syncByte1 = recvData.front(); recvData.pop();
-        uint8_t syncByte2 = recvData.front(); recvData.pop();
-        if (syncByte1 == 0xBE && syncByte2 == 0xEF) {
-            packet->portions.messageType = recvData.front(); recvData.pop();
-            for (int i = 0; i < SERIAL_MES_DATA_LEN; i++) {
-                packet->portions.data[i] = recvData.front();
-                recvData.pop();
+        static bool sawFirstPacket = false;
+
+        while (recvData.size() >= SERIAL_MES_LEN) {
+
+            // Read potential sync bytes
+            uint8_t b1 = recvData.front(); recvData.pop();
+            uint8_t b2 = recvData.front(); recvData.pop();
+
+            if (b1 == 0xBE && b2 == 0xEF) {
+
+                if (!sawFirstPacket) {
+                    // FIRST PACKET — IGNORE IT COMPLETELY
+                    sawFirstPacket = true;
+
+                    // Throw away the entire packet (type + data + checksums)
+                    recvData.pop(); // messageType
+                    for (int i = 0; i < SERIAL_MES_DATA_LEN; i++) recvData.pop();
+                    recvData.pop(); // checksum high
+                    recvData.pop(); // checksum low
+
+                    continue;
+                }
+
+                // SECOND PACKET — THIS IS THE GOOD ONE
+                sawFirstPacket = false; // reset for next round
+
+                // Parse packet normally
+                packet->portions.messageType = recvData.front(); recvData.pop();
+                for (int i = 0; i < SERIAL_MES_DATA_LEN; i++) {
+                    packet->portions.data[i] = recvData.front();
+                    recvData.pop();
+                }
+
+                uint8_t chkH = recvData.front(); recvData.pop();
+                uint8_t chkL = recvData.front(); recvData.pop();
+
+                // ---- PRINT THE GOOD PACKET IN ONE HEX STRING ----
+                std::cout << "\n=== GOOD DS PACKET RECEIVED ===" << std::endl;
+
+                // Print sync bytes first
+                std::cout << "beef";
+
+                // Print messageType
+                if (packet->portions.messageType < 0x10) std::cout << "0";
+                std::cout << std::hex << (int)packet->portions.messageType;
+
+                // Print data bytes
+                for (int i = 0; i < SERIAL_MES_DATA_LEN; i++) {
+                    if (packet->portions.data[i] < 0x10) std::cout << "0";
+                    std::cout << std::hex << (int)packet->portions.data[i];
+                }
+
+                // Print checksums
+                if (chkH < 0x10) std::cout << "0";
+                std::cout << std::hex << (int)chkH;
+                if (chkL < 0x10) std::cout << "0";
+                std::cout << std::hex << (int)chkL;
+
+                std::cout << std::dec << std::endl; // reset to decimal
+                std::cout << "================================\n" << std::endl;
+
+                // ---- SEND GOOD PACKET TO HAL IMMEDIATELY ----
+                enqueueMessage(packet);   // push it to outgoing queue (HAL)
+
+                return true;
             }
-            // remove checksums
-            recvData.pop();
-            recvData.pop();
-            return true;
-        } else {
-            std::cout << portName << " sent incorrect sync bytes: "
-                      << (int)syncByte1 << " and " << (int)syncByte2 << std::endl;
-        }
-    }
 
-    return false;
-}
+            // Not sync bytes → ignore noise
+        }
+
+        return false;
+    }
 
 // DISABLED: This method is no longer used for driverstation communication
 // Only used internally for HAL communication

@@ -376,11 +376,11 @@ class RobotCommunicator:
         print("sent heartbeat")
 
     def update(self, ds_state, connection):
-         
         now = time.time()
-        if now - self.last_send_time >= 0.5 :
-            self.last_send_time = now  # ← Set this IMMEDIATELY before sending
+        if now - self.last_send_time >= 1.0:
+            self.last_send_time = now
             self.send_gamepad_packet(ds_state.get_gamepad(), connection)
+    
 
 
 class DriverStation:
