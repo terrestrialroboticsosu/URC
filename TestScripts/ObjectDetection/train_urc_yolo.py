@@ -1,8 +1,8 @@
 from ultralytics import YOLO
 
 def main():
-    # Use YOLOv8 nano (smallest, best for Pi inference)
-    model = YOLO("yolov8n.pt")
+    # Use YOLOv11 nano (smallest, best for Pi inference)
+    model = YOLO("yolov11n.pt")
 
     model.train(
         data="urc_objects/data.yaml",
@@ -19,14 +19,14 @@ def main():
         augment=True,
         close_mosaic=10,   # stabilizes late training
         project="runs",
-        name="urc_objects_yolov8n",
+        name="urc_objects_yolov11n",
     )
 
     # Evaluate
     model.val(data="urc_objects/data.yaml", imgsz=416)
 
     # Export for fast Pi inference
-    best = "runs/urc_objects_yolov8n/weights/best.pt"
+    best = "runs/urc_objects_yolov11n/weights/best.pt"
 
     m2 = YOLO(best)
     m2.export(format="onnx", imgsz=416, opset=12)   # good path for Pi (OpenCV DNN / ONNX Runtime)

@@ -37,8 +37,8 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--source", default="0",
                         help="0 for webcam, or path to video file (e.g. test.mp4)")
-    parser.add_argument("--model", default="yolov8n.pt",
-                        help="YOLO model path (e.g. yolov8n.pt or your custom .pt)")
+    parser.add_argument("--model", default="yolov11n.pt",
+                        help="YOLO model path (e.g. yolov11n.pt or your custom .pt)")
     parser.add_argument("--imgsz", type=int, default=416,
                         help="Inference image size (smaller = faster on Pi)")
     parser.add_argument("--conf", type=float, default=0.25,
@@ -128,7 +128,7 @@ def main():
             cv2.putText(annotated, f"FPS: {fps:.1f}", (10, 30),
                         cv2.FONT_HERSHEY_SIMPLEX, 0.9, (255, 255, 255), 2)
 
-        cv2.imshow("YOLOv8 Detection", annotated)
+        cv2.imshow("YOLOv11 Detection", annotated)
         key = cv2.waitKey(1) & 0xFF
         if key in (27, ord('q')):  # ESC or q
             break
