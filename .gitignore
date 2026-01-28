@@ -5,6 +5,8 @@ RobotCode/Calibration/venv
 RobotCode/build
 compile_commands.json
 .cache
+venv/
+.venv/
 
 # Robot Code Subprojects
 RobotCode/subprojects/*
