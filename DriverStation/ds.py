@@ -6,33 +6,35 @@ import time
 import pygame
 import struct
 import camera
+import signal
+import sys
+import time
 
 DATA_UNKNOWN="---"
 JOYSTICK_DEADZONE=0.1
 
 class RobotMode(Enum):
     TELEOP = 0
-    AUTO_EXECAVATE = 1,
+    AUTO_EXECAVATE = 1
 
     def __str__(self):
-        if(self == self.TELEOP):
+        if self == self.TELEOP:
             return "TeleOperated"
-        elif(self == self.HEIGHT_CONTROL):
+        elif self == self.AUTO_EXECAVATE:
             return "Auto Execavate"  
         return None
 
-
 class LinkageState(Enum):
     RETRACTED = 0
-    HEIGHT_CONTROL = 1,
+    HEIGHT_CONTROL = 1
     MANUAL = 2
 
     def __str__(self):
-        if(self == self.RETRACTED):
+        if self == self.RETRACTED:
             return "Retracted"
-        elif(self == self.HEIGHT_CONTROL):
+        elif self == self.HEIGHT_CONTROL:
             return "Height Control"
-        elif(self == self.MANUAL):
+        elif self == self.MANUAL:
             return "Manual"
 
 class RobotTelemetry: 
@@ -44,16 +46,12 @@ class RobotTelemetry:
         self.rp2040_connected = False
         self.intake_pos = DATA_UNKNOWN
         self.robot_mode = DATA_UNKNOWN
-        ##
         self.left_motor_speed = 0 
         self.right_motor_speed = 0 
         self.autonomous_mode = False 
         self.arrived_at_target = False 
-        # A list to hold the angles of the 5 arm joints.
         self.arm_joint_angles = [0.0] * 6  
-        # Stores the X, Y, Z position of the arm's end-effector.
         self.arm_end_effector_pos = [0.0, 0.0, 0.0]  
-        
 
     def set_robot_mode(self, mode):
         self.robot_mode = mode
@@ -89,27 +87,22 @@ class RobotTelemetry:
         return self.autonomous_mode
     
     def at_target(self):
-        return self.at_target
+        return self.arrived_at_target
 
-    # New: Arm-specific setters and getters
+    # Arm-specific setters/getters
     def set_arm_joint_angles(self, angles):
-        """Sets the angles for the 5 arm joints."""
         if len(angles) == 6:
             self.arm_joint_angles = angles
     
     def get_arm_joint_angles(self):
-        """Returns the current angles of the 5 arm joints."""
         return self.arm_joint_angles
     
     def set_arm_end_effector_pos(self, pos):
-        """Sets the X, Y, Z position of the end-effector."""
         if len(pos) == 3:
             self.arm_end_effector_pos = pos
             
     def get_arm_end_effector_pos(self):
-        """Returns the end-effector's position."""
         return self.arm_end_effector_pos
-
 
 class GamepadState: 
     def __init__(self):
@@ -135,7 +128,6 @@ class GamepadState:
         self.right_trigger = 0.0
         self.autonomous_mode = False
         self.at_target = False
-
 
     def is_connected(self):
         return self.connected
@@ -175,7 +167,7 @@ class GamepadState:
 
     def get_button_a(self):
         return self.button_a
-
+    
     def get_button_b(self):
         return self.button_b
 
@@ -231,7 +223,6 @@ class DriverStationState:
 
     def set_robot_connected(self, connected):
         self.robot_connected = connected
-
         if not connected:
             self.telemetry.reset()
     
@@ -284,184 +275,113 @@ class DriverStationState:
     def shutdown(self):
         self.running = False
 
-    # New: Arm control methods, triggered by buttons in the GUI
+    # Arm control
     def calibrate_arm(self):
-        """Placeholder for sending a calibrate arm command to the robot."""
         print("Calibrating arm...")
 
     def stow_arm(self):
-        """Placeholder for sending a stow arm command to the robot."""
         print("Stowing arm...")
-    
+
+# ... keep all imports and class definitions above as-is ...
+
 class DriverStationInput:
     def __init__(self, ds_state):
         self.joystick = None
-        self.update(ds_state)
+        pygame.joystick.init()
+        self.connect_joystick()
 
     def connect_joystick(self):
         if pygame.joystick.get_count() > 0:
             self.joystick = pygame.joystick.Joystick(0)
-
-    def update(self, ds_state : DriverStationState):
-        if self.joystick is None:
-            self.connect_joystick()
-        elif pygame.joystick.get_count() == 0:
-            self.joystick.quit()
-            self.joystick = None
-            
-        gamepad_state = ds_state.get_gamepad()
-        if self.joystick is not None:
-            gamepad_state.set_connected(True)
-            gamepad_state.set_joysticks(
-                self.joystick.get_axis(0),
-                -self.joystick.get_axis(1),
-                self.joystick.get_axis(3),
-                -self.joystick.get_axis(4)
-            )
-            gamepad_state.set_triggers(
-                self.joystick.get_axis(2) / 2.0 + 0.5,
-                self.joystick.get_axis(5) / 2.0 + 0.5
-            )
-            dpad_x, dpad_y = self.joystick.get_hat(0)
-            gamepad_state.set_dpad(
-                dpad_y > 0,
-                dpad_y < 0,
-                dpad_x > 0,
-                dpad_x < 0
-            )
-            gamepad_state.set_buttons(
-                self.joystick.get_button(0),
-                self.joystick.get_button(1),
-                self.joystick.get_button(2),
-                self.joystick.get_button(3),
-            )
-            gamepad_state.set_bumpers(
-                self.joystick.get_button(4),
-                self.joystick.get_button(5)
-            )
+            self.joystick.init()
+            print(f"Joystick connected: {self.joystick.get_name()}")
         else:
+            self.joystick = None
+
+    def update(self, ds_state: DriverStationState):  # ✅ only one argument
+        gamepad_state = ds_state.get_gamepad()
+        if self.joystick is None or pygame.joystick.get_count() == 0:
             gamepad_state.set_connected(False)
+            return
+
+        axes = [self.joystick.get_axis(i) for i in range(self.joystick.get_numaxes())]
+        def axis(idx): return axes[idx] if idx < len(axes) else 0.0
+        def deadzone(val): return 0 if abs(val) < JOYSTICK_DEADZONE else val
+
+        left_x = deadzone(axis(0))
+        left_y = deadzone(-axis(1))
+        right_x = deadzone(axis(3))
+        right_y = deadzone(-axis(4))
+        left_trigger = (axis(2) / 2.0 + 0.5) if len(axes) > 2 else 0.0
+        right_trigger = (axis(5) / 2.0 + 0.5) if len(axes) > 5 else 0.0
+
+        gamepad_state.set_connected(True)
+        gamepad_state.set_joysticks(left_x, left_y, right_x, right_y)
+        gamepad_state.set_triggers(left_trigger, right_trigger)
+
+        if self.joystick.get_numhats() > 0:
+            dpad_x, dpad_y = self.joystick.get_hat(0)
+            gamepad_state.set_dpad(dpad_y > 0, dpad_y < 0, dpad_x < 0, dpad_x > 0)
+
+        num_buttons = self.joystick.get_numbuttons()
+        def btn(idx): return self.joystick.get_button(idx) if idx < num_buttons else 0
+        gamepad_state.set_buttons(btn(0), btn(1), btn(2), btn(3))
+        gamepad_state.set_bumpers(btn(4), btn(5))
 
 class RobotCommunicator:
     def __init__(self):
-        self.last_gamepad_packet = 0
-        self.last_heartbeat = 0
-        self.last_arm_cmd = 0; # New: To track the last time an arm command was sent.
-        pass
+        self.last_send_time = 0
 
-    def send_gamepad_packet(self, gamepad : GamepadState, connection : networking.ConnectionManager):
+    def send_gamepad_packet(self, gamepad, connection):
+        import struct
         button_set1 = 0
         button_set2 = 0
 
-        # bitset1 |= self.joystick.get_button(8) << 0  # Left Stick Press
-        # bitset1 |= self.joystick.get_button(9) << 1  # Right Stick Press
-        button_set1 |= gamepad.get_dpad_up() << 2  # D-pad up
-        button_set1 |= gamepad.get_dpad_down() << 3  # D-pad down
-        button_set1 |= gamepad.get_dpad_left() << 4  # D-pad right
-        button_set1 |= gamepad.get_dpad_right() << 5  # D-pad left
-        button_set1 |= gamepad.get_button_a() << 6  # A button
-        button_set1 |= gamepad.get_button_b() << 7  # B button
+        button_set1 |= gamepad.get_dpad_up() << 2
+        button_set1 |= gamepad.get_dpad_down() << 3
+        button_set1 |= gamepad.get_dpad_left() << 4
+        button_set1 |= gamepad.get_dpad_right() << 5
+        button_set1 |= gamepad.get_button_a() << 6
+        button_set1 |= gamepad.get_button_b() << 7
 
-        button_set2 |= gamepad.get_button_x() << 0  # X button
-        button_set2 |= gamepad.get_button_y() << 1  # Y button
-        # button_set2 |= joystick.get_axis(2)>10 << 2  # Left trigger, scaled down
-        # button_set2 |= joystick.get_axis(5)>10 << 3  # Right Trigger, scaled down
-        button_set2 |= gamepad.get_left_bumper() << 4  # Left Bumper
-        button_set2 |= gamepad.get_right_bumper() << 5  # Right Bumper
-        # button_set2 |= joystick.get_button(7) << 6  # Start button
-        # button_set2 |= joystick.get_button(6) << 7  # Select button
+        button_set2 |= gamepad.get_button_x() << 0
+        button_set2 |= gamepad.get_button_y() << 1
+        button_set2 |= gamepad.get_left_bumper() << 4
+        button_set2 |= gamepad.get_right_bumper() << 5
 
         packet = struct.pack(
-                    '!bbbbbBBbbbb',
-                    0x02,  # Message type for controller status
-                    int(gamepad.get_left_stick()[1] * 100),
-                    int(gamepad.get_left_stick()[0] * 100),
-                    int(gamepad.get_right_stick()[1] * 100),
-                    int(gamepad.get_right_stick()[0] * 100),
-                    button_set1,
-                    button_set2,
-                    int(gamepad.get_left_trigger() * 100),
-                    int(gamepad.get_right_trigger() * 100), 0, 0,  # Future usage placeholders
-                )
-        
-        connection.send_packet(packet)
-
-        self.last_gamepad_packet = time.time()
-
-    def send_heartbeat(self, ds_state: DriverStationState, connection):
-        packet = struct.pack(
-            '!bbbbbbbbbbb',
-            0x01, 
-            ds_state.is_robot_enabled(), 0, 0, 0, 0, 0, 0, 0, 0, 0
+            '!bbbbbBBbbbb',
+            0x02,
+            int(gamepad.get_left_stick()[1] * 100),
+            int(gamepad.get_left_stick()[0] * 100),
+            int(gamepad.get_right_stick()[1] * 100),
+            int(gamepad.get_right_stick()[0] * 100),
+            button_set1,
+            button_set2,
+            int(gamepad.get_left_trigger() * 100),
+            int(gamepad.get_right_trigger() * 100),
+            0, 0
         )
         connection.send_packet(packet)
-        self.last_heartbeat = time.time()
+        print("sent gamepad packet")
 
-    def send_arm_cmd(self, joint_angles, connection):
-        """Sends a packet with the target joint angles for the arm."""
-        # Note: This is a placeholder. You'll need to define a new packet type for arm commands
-        # and pack the joint angle data into it.
-        pass
+    def send_heartbeat(self, ds_state, connection):
+        import struct
+        packet = struct.pack(
+            '!bbbbbbbbbbb',
+            0x01,
+            int(ds_state.is_robot_enabled()), 0, 0, 0, 0, 0, 0, 0, 0, 0
+        )
+        #connection.send_packet(packet)
+        print("sent heartbeat")
 
-    def handle_packet(self, packet, ds_state : DriverStationState):
-        packet_type = packet[0]
-        telemetry = ds_state.get_telemetry()
-
-        if packet_type == 0x01: # Heartbeat
-            ds_state.get_telemetry().set_robot_enabled(packet[1] != 0)
-            ds_state.get_telemetry().set_rp2040_connected(packet[2] != 0)
-            ds_state.get_telemetry().set_robot_mode(RobotMode(packet[3]))
-        elif packet_type == 0x70: # Motor Telemetry Packet
-            # old --> pos = packet[1] | (packet[2] << 8) | (packet[3] << 16) | (packet[3] << 24) 
-            # old --> pos /= 100
-            # old --> ds_state.get_telemetry().set_intake_pos(pos)
-            
-            # This block is now corrected to handle motor telemetry, which was previously misplaced.
-            # Unpack left speed from the first payload byte (packet[1])
-            left_speed = int.from_bytes([packet[1]], byteorder='little', signed=True)
-            
-            # Unpack right speed from the second payload byte (packet[2])
-            right_speed = int.from_bytes([packet[2]], byteorder='little', signed=True)
-            
-            # Update the telemetry object directly
-            telemetry.left_motor_speed = left_speed
-            telemetry.right_motor_speed = right_speed
-        elif packet_type == 0x03:
-            pos = packet[1] | (packet[2] << 8) | (packet[3] << 16) | (packet[3] << 24) 
-            pos /= 100
-            ds_state.get_telemetry().set_intake_pos(pos)
-        elif packet_type == 0x02:
-            telemetry.autonomous_mode = False
-
-        elif packet_type == 0x0F:
-            telemetry.at_target = False
-        # New: Arm telemetry packet handler
-        elif packet_type == 0x05: # This is a new message type for arm telemetry.
-            # Assuming 5 joint angles are sent as floats (4 bytes each)
-            joint_angles = list(struct.unpack('5f', bytes(packet[3:23])))
-            telemetry.set_arm_joint_angles(joint_angles)
-            # Assuming end-effector pose (x, y, z) are sent as floats
-            end_effector_pos = list(struct.unpack('3f', bytes(packet[23:35])))
-            telemetry.set_arm_end_effector_pos(end_effector_pos)
-
-        else:
-            print(f"Unknown packet type from robot: {packet_type}")
-
-    def update(self, ds_state, connection: networking.ConnectionManager):
-        if time.time() - self.last_gamepad_packet > 0.02:
+    def update(self, ds_state, connection):
+         
+        now = time.time()
+        if now - self.last_send_time >= 0.5 :
+            self.last_send_time = now  # ← Set this IMMEDIATELY before sending
             self.send_gamepad_packet(ds_state.get_gamepad(), connection)
 
-        if time.time() - self.last_heartbeat > 0.1:
-            self.send_heartbeat(ds_state, connection)
-            
-        # New: Send arm commands if needed (e.g., if a slider was moved)
-        if time.time() - self.last_arm_cmd > 0.1:
-            # This is a placeholder for checking if arm command needs to be sent.
-            pass
-        packet = connection.get_next_packet()
-        while packet is not None:
-            self.handle_packet(packet, ds_state)
-            packet = connection.get_next_packet()
 
 class DriverStation:
     def __init__(self):
@@ -473,19 +393,31 @@ class DriverStation:
         self.robot_communicator = RobotCommunicator()
 
     def run(self):
-        while self.state.running:             
+        while self.state.running:
             self.state.set_robot_connected(self.connection_manager.is_connected())
-
-            if(self.connection_manager.is_connected()):
-                self.robot_communicator.update(self.state, self.connection_manager)
-
-            self.input.update(self.state)
+            self.input.update(self.state)   # <-- update joystick first
+            self.robot_communicator.update(self.state, self.connection_manager)
             self.window.render(self.state, self.gui)
             self.window.process_events(self.state)
+            pygame.time.wait(5)
 
-        self.connection_manager.shutdown()
 
-camera.start_camera_webserver()
+
 ds = DriverStation()
 print("Driver station created. Running application!")
-ds.run()
+
+def signal_handler(sig, frame):
+    print("Ctrl+C pressed, shutting down...")
+    ds.state.shutdown()
+    ds.connection_manager.shutdown()
+    pygame.quit()
+    sys.exit(0)
+
+signal.signal(signal.SIGINT, signal_handler)
+
+try:
+    ds.run()
+finally:
+    ds.connection_manager.shutdown()
+    pygame.quit()
+    print("Driver station exited cleanly.")

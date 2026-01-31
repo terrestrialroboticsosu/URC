@@ -9,7 +9,6 @@
 #include "robotState.h"
 #include "util.h"
 
-#define DS_HEARTBEAT_RATE_MS 500
 #define DS_TIMEOUT_MS 1000
 
 std::atomic<bool> shutdown_flag(false);
@@ -31,6 +30,10 @@ bool handleDsMessages(DsCommunicator &dsComms, RobotControl &control) {
             control.handleGamepadPacket(gamepadPacket);
             std::cout << "Received gamepad packet" << std::endl;
         }
+         else {
+             // Handle packets from the base station that aren't expected here
+             std::cout << "Received unexpected radio message type: " << +type << std::endl;
+        }
     }
 
     return anyMessageRecv;
@@ -38,8 +41,8 @@ bool handleDsMessages(DsCommunicator &dsComms, RobotControl &control) {
 
 int main(int argc, char *argv[]) {
     std::cout << "Initializing robot code " << std::endl;
-    DsCommunicator dsComms("/dev/ttyACM0", 115200);
-    RobotActuation rp2040("/dev/ttyACM1", 115200);
+    DsCommunicator dsComms("/dev/ttyACM1", 115200);
+    RobotActuation rp2040("/dev/ttyACM2", 115200);
     RobotControl control;
     std::cout << "Robot code initialized!" << std::endl;
 
@@ -50,18 +53,15 @@ int main(int argc, char *argv[]) {
     sigaction(SIGTERM, &act, NULL);
 #endif
 
-    uint64_t lastSentDsHearbeat = 0;
+    // REMOVED: lastSentDsHearbeat variable (no longer needed)
     uint64_t lastDsMessageRx = getUnixTimeMs();
     while (!shutdown_flag) {
         uint64_t currentTime = getUnixTimeMs();
 
         // Driver Station Comms
         if (dsComms.isConnected()) {
-            if (currentTime - lastSentDsHearbeat > DS_HEARTBEAT_RATE_MS) {
-                dsComms.sendHeartbeat(control.getRobotState().getRobotMode(),
-                                      rp2040.isConnected());
-                lastSentDsHearbeat = currentTime;
-            }
+            // REMOVED: Heartbeat sending to driverstation
+            // We only receive from driverstation, never send back
 
             if (handleDsMessages(dsComms, control)) {
                 lastDsMessageRx = getUnixTimeMs();
@@ -89,13 +89,6 @@ int main(int argc, char *argv[]) {
                     std::string msg = packet.GetLogMessage();
 
                     std::cout << "RP2040 LOG: " << msg << std::endl;
-                    //} else if (packet.GetType() == PACKET_INTAKE_POS) {
-                    // int pos = packet.GetIntakePos();
-
-                    // std::cout << "INTAKE POS: " << pos << std::endl;
-                    // dsComms.sendIntakePos(pos);
-                    //  intake does not exist anymore rn this code will be
-                    //  removed soon
                 } else {
                     std::cout << "Received unknown message type from RP2040: "
                               << +packet.GetType() << std::endl;

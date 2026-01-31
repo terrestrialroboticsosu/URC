@@ -1,93 +1,129 @@
+# networking.py
 import serial
 import threading
 import time
 import queue
 
-SERIAL_PORT = "/dev/ttyACM0" #linux port will be different from windows
+SERIAL_PORT = "/dev/ttyACM0"
 BAUD_RATE = 115200
-TIMEOUT = 1.0
+TIMEOUT = 0.01
 
 class ConnectionManager:
     def __init__(self):
-        self.network_thread = threading.Thread(target=self.run)
-        self.connected = False
-        self.serial_conn = serial.Serial()
-        self.serial_conn.port = SERIAL_PORT
-        self.serial_conn.baudrate = BAUD_RATE
-        self.serial_conn.timeout = TIMEOUT
+        # Open serial immediately
+        try:
+            self.serial_conn = serial.Serial(
+                port=SERIAL_PORT,
+                baudrate=BAUD_RATE,
+                timeout=TIMEOUT,
+                write_timeout=TIMEOUT
+            )
+            self.connected = True
+            print(f"Connected to {SERIAL_PORT}!")
+        except serial.SerialException as e:
+            print(f"Failed to open {SERIAL_PORT}: {e}")
+            self.serial_conn = None
+            self.connected = False
+
         self.tx_queue = queue.Queue()
         self.rx_queue = queue.Queue()
+        self.running = True
 
-        self.network_thread.start()
+        # Start threads
+        self.conn_thread = threading.Thread(target=self.connection_loop, daemon=True)
+        self.tx_thread = threading.Thread(target=self.tx_loop, daemon=True)
+        self.conn_thread.start()
+        self.tx_thread.start()
 
     def shutdown(self):
-        print("Shutting down serial connection...")
         self.running = False
-        self.network_thread.join()
-        if self.serial_conn.is_open:
+        self.conn_thread.join()
+        self.tx_thread.join()
+        if self.serial_conn and self.serial_conn.is_open:
             self.serial_conn.close()
         print("Serial connection closed")
 
-    def get_next_packet(self):
-        if self.rx_queue.qsize() < 11:
-            return None
+    # Packet framing (no CRC)
+    def make_packet(self, data_bytes):
+        msg_len = len(data_bytes)
+        header = [0xBE, 0xEF, msg_len & 0xFF, (msg_len >> 8) & 0xFF]
+        return bytes(header + list(data_bytes))
 
-        packet = []
-        for _ in range(11):
-            packet.append(self.rx_queue.get())
-        return packet
-
-    def run(self):
-        self.running = True
-        while self.running:
-            if self.connected:
-                print("Disconnected")
-            self.connected = False
-            try:
-                self.serial_conn.open()
-                self.handle_connection()
-                self.serial_conn.close()
-            except serial.SerialException as e:
-                print(f"Failed to connect: {e}. Sleep 1 second...")
-                time.sleep(1)
-
-    def send_packet(self, packet):
+    # Packet sending
+    # FIXED: no longer sends immediately, only queues packet
+    def send_packet(self, payload):
+        if isinstance(payload, str):
+            payload = payload.encode()
+        packet = self.make_packet(payload)
         self.tx_queue.put(packet)
+        
+    def tx_loop(self):
+        while self.running:
+            try:
+                packet = self.tx_queue.get(timeout=0.01)
+            except queue.Empty:
+                continue
 
-    def clear_tx_queue(self):
-        with self.tx_queue.mutex:
-            self.tx_queue.queue.clear()
-
+            if self.serial_conn and self.serial_conn.is_open:
+                try:
+                    self.serial_conn.write(packet)
+                    self.serial_conn.flush()
+                    print(f"tx_loop: sent packet ({len(packet)} bytes): {packet.hex()}")
+                except serial.SerialException:
+                    # DON'T re-queue, just drop and reconnect
+                    self.connected = False
+                    time.sleep(0.05)
+            else:
+                # DON'T re-queue here either
+                time.sleep(0.05)
+        
+    # Packet receiving
     def read_data(self):
+        if not self.serial_conn or not self.serial_conn.is_open:
+            return
         try:
             data = self.serial_conn.read(128)
             for byte in data:
                 self.rx_queue.put(byte)
-            self.last_rx_time = time.time()
         except serial.SerialException:
-            pass
+            self.connected = False
 
-    def handle_connection(self):
-        self.connected = True
-        self.last_packet = time.time()
-        self.last_rx_time = time.time()
-        self.clear_tx_queue()
-        print("Connected to serial device!")
+    def get_next_packet(self):
+        if self.rx_queue.qsize() < 4:
+            return None
 
-        while self.running and self.serial_conn.is_open:
+        first = self.rx_queue.queue[0]
+        second = self.rx_queue.queue[1]
+
+        if first != 0xBE or second != 0xEF:
+            self.rx_queue.get()
+            return None
+
+        length_L = self.rx_queue.queue[2]
+        length_H = self.rx_queue.queue[3]
+        msg_len = length_L | (length_H << 8)
+        total_len = 4 + msg_len
+
+        if self.rx_queue.qsize() < total_len:
+            return None
+
+        packet = [self.rx_queue.get() for _ in range(total_len)]
+        return packet
+
+    # Connection thread
+    def connection_loop(self):
+        while self.running:
+            if self.serial_conn and not self.serial_conn.is_open:
+                try:
+                    self.serial_conn.open()
+                    self.connected = True
+                    print(f"Connected to {SERIAL_PORT}!")
+                except serial.SerialException:
+                    self.connected = False
+                    time.sleep(1)
+                    continue
             self.read_data()
-
-            if time.time() - self.last_rx_time > 1.0:
-                print("No packets received for one second. Closing connection.")
-                return
-
-            if not self.tx_queue.empty():
-                msg = self.tx_queue.get_nowait()
-                if msg is not None:
-                    self.serial_conn.write(msg)
-                    self.last_packet = time.time()
-            else:
-                time.sleep(0.1)
+            time.sleep(0.005)
 
     def is_connected(self):
         return self.connected
