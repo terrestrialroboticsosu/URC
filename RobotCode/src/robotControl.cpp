@@ -26,7 +26,7 @@ void RobotControl::sendStateToRP2040(RobotActuation *rp2040) {
 
   if (leftChange || rightChange || currentTime - this->lastDriveCmd > MOTOR_UPDATE_RATE_MS){
     std::cout << "Send Drive to RP2040 (FL=" << +currentState.getDriveLeft() << ", FR=" << +currentState.getDriveRight()  << std::endl;
-    rp2040->sendDriveMotors(currentState.getDriveRight(), currentState.getDriveRight());
+    rp2040->sendDriveMotors(currentState.getDriveLeft(), currentState.getDriveRight());
     lastDriveCmd = currentTime;
 
 

@@ -44,6 +44,7 @@ int main(int argc, char *argv[]) {
     DsCommunicator dsComms("/dev/ttyACM1", 115200);
     RobotActuation rp2040("/dev/ttyACM2", 115200);
     RobotControl control;
+    control.getRobotState().setMode(ROBOT_MODE_TELEOP); 
     std::cout << "Robot code initialized!" << std::endl;
 
 #ifndef _WIN32
