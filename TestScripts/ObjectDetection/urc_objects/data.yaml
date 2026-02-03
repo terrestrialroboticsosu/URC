@@ -1,8 +1,0 @@
-path: urc_objects
-train: images/train
-val: images/val
-
-names:
-  0: orange_rubber_mallet
-  1: rock_pick_hammer
-  2: wide_mouth_bottle_1L
