@@ -4,7 +4,7 @@ from ultralytics import YOLO
 def main():
     # 1. Load the model you trained
     # Ensure this file is in the same folder as this script!
-    model = YOLO("best_object_detection_URC.pt")
+    model = YOLO("best_object_detection_URCv2.pt")
 
     # 2. Open the Webcam (0 is usually the default laptop camera)
     cap = cv2.VideoCapture(0)
