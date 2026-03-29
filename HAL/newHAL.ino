@@ -7,7 +7,7 @@
 #define SERIAL_PAYLOAD_SIZE 8
 
 #define LEFT_MOTOR_PIN 15
-#define RIGHT_MOTOR_PIN 27
+#define RIGHT_MOTOR_PIN 27  
 
 #define ROBOT_TIMEOUT_MS 3000
 
