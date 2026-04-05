@@ -5,7 +5,7 @@ import os
 
 # --- Configuration ---
 CHECKERBOARD_SIZE = (7, 10)  # Must be (8 squares - 1, 11 squares - 1)
-IMAGE_DIR = 'calibration_images'
+IMAGE_DIR = 'TestScripts/ArucoDetection/calibration_images'
 CALIBRATION_FILE = 'webcam_calibration.npz'
 
 # Size of one square on your checkerboard in mm

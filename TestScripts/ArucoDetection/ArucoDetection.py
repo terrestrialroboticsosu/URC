@@ -1,157 +1,185 @@
 import cv2
 import cv2.aruco as aruco
 import numpy as np
-import os
+import math
+# ====================== CONFIG ======================
 
+DESIRED_DISTANCE = 2.0
+KP_FORWARD = 50
+KP_TURN = 50
 
-def load_calibration(filename):
-    """
-    Loads camera matrix and distortion coefficients from a .npz file.
-    """
-    if not os.path.exists(filename):
-        print(f"Error: Calibration file '{filename}' not found.")
-        print("Please ensure 'webcam_calibration.npz' is in the same folder.")
+TAG_SIZE = 0.2  # meters (IMPORTANT: must match real tag)
+
+CALIB_FILE = "/home/jay-patel/Documents/URC/TestScripts/ArucoDetection/webcam_calibration.yaml"
+CAMERA_INDEX = 33
+
+SPIN_SPEED = 50
+
+# ====================== LOAD YAML ======================
+
+def load_yaml(filename):
+    fs = cv2.FileStorage(filename, cv2.FILE_STORAGE_READ)
+    if not fs.isOpened():
+        print("Failed to open calibration file")
         return None, None
 
-    with np.load(filename) as data:
-        # Try to access keys, handle potential naming variations
-        if 'camera_matrix' in data:
-            mtx = data['camera_matrix']
-        elif 'mtx' in data:
-            mtx = data['mtx']
-        else:
-            print("Error: Could not find 'camera_matrix' in .npz file.")
-            return None, None
+    cam = fs.getNode("camera_matrix").mat()
+    dist = fs.getNode("dist_coeffs").mat()
+    fs.release()
 
-        if 'dist_coeffs' in data:
-            dist = data['dist_coeffs']
-        elif 'dist' in data:
-            dist = data['dist']
-        else:
-            print("Error: Could not find 'dist_coeffs' in .npz file.")
-            return None, None
+    return cam, dist
 
-    return mtx, dist
+# ====================== EULER ======================
 
+def get_euler(rvec):
+    # Convert rotation vector to rotation matrix
+    R, _ = cv2.Rodrigues(rvec)
+    
+    sy = math.sqrt(R[0,0] * R[0,0] + R[1,0] * R[1,0])
 
-def calculate_midpoint(tvecs):
-    """
-    Calculates the average (centroid) of a list of translation vectors.
-    """
-    if len(tvecs) == 0:
-        return None
+    singular = sy < 1e-6
 
-    # Calculate the mean of X, Y, and Z coordinates
-    x_avg = np.mean([t[0] for t in tvecs])
-    y_avg = np.mean([t[1] for t in tvecs])
-    z_avg = np.mean([t[2] for t in tvecs])
+    if not singular:
+        roll  = math.atan2(R[2,1], R[2,2])
+        pitch = math.atan2(-R[2,0], sy)
+        yaw   = math.atan2(R[1,0], R[0,0])
+    else:
+        roll  = math.atan2(-R[1,2], R[1,1])
+        pitch = math.atan2(-R[2,0], sy)
+        yaw   = 0
 
-    return np.array([x_avg, y_avg, z_avg])
+    # Convert radians to degrees
+    roll  = math.degrees(roll)
+    pitch = math.degrees(pitch)
+    yaw   = math.degrees(yaw)
 
+    return roll, pitch, yaw
 
-def urc_task_targeting():
-    # --- CONFIGURATION ---
-    camera_index = 0
-    calib_filename = "webcam_calibration.npz"
+# ====================== MOTOR ======================
 
-    # Task Specifics
-    # URC Rules: USB markers are 1 x 1 cm
-    USB_MARKER_SIZE = 0.01  # 1 cm in meters
-    REQUIRED_TAG_COUNT = 4  # User requirement: Look for exactly 4 tags
-    TARGET_COLOR = (0, 255, 255)  # Yellow
+def clamp(v, mn, mx):
+    return max(min(v, mx), mn)
 
-    # --- SETUP ---
+def send_motor_command(left, right):
+    left = -left
 
-    # 1. Load Calibration
-    camera_matrix, dist_coeffs = load_calibration(calib_filename)
-    if camera_matrix is None or dist_coeffs is None:
-        return  # Exit if calibration fails
+    left_conv  = int(clamp(left + 100, 0, 200))
+    right_conv = int(clamp(right + 100, 0, 200))
 
-    # 2. Setup ArUco
-    aruco_dict = aruco.getPredefinedDictionary(aruco.DICT_4X4_50)
-    parameters = aruco.DetectorParameters()
-    detector = aruco.ArucoDetector(aruco_dict, parameters)
+    print(f"[CMD] L:{left_conv} R:{right_conv}")
 
-    # 3. Start Camera
-    cap = cv2.VideoCapture(camera_index)
-    if not cap.isOpened():
-        print(f"Error: Could not open camera {camera_index}")
+# ====================== MAIN ======================
+
+def main():
+
+    camera_matrix, dist_coeffs = load_yaml(CALIB_FILE)
+    if camera_matrix is None:
         return
 
-    print("URC Task Targeting Started.")
-    print(f"Using calibration from: {calib_filename}")
-    print(f"Looking for exactly {REQUIRED_TAG_COUNT} tags of any ID to define the USB slot...")
+    aruco_dict = aruco.getPredefinedDictionary(aruco.DICT_4X4_50)
+    params = aruco.DetectorParameters()
+
+    cap = cv2.VideoCapture(CAMERA_INDEX)
+    cap.set(cv2.CAP_PROP_AUTOFOCUS, 0)
+
+    if not cap.isOpened():
+        print("Camera failed")
+        return
+
+    print("=== MANUAL solvePnP MODE ===")
+
+    stopped = False
+
+    # ✅ DEFINE REAL WORLD MARKER CORNERS (CRITICAL)
+    half = TAG_SIZE / 2
+    object_points = np.array([
+        [-half, -half, 0],
+        [ half, -half, 0],
+        [ half,  half, 0],
+        [-half,  half, 0]
+    ], dtype=np.float32)
 
     while True:
         ret, frame = cap.read()
-        if not ret: break
+        if not ret:
+            break
 
         gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
-        corners, ids, _ = detector.detectMarkers(gray)
+
+        detector = aruco.ArucoDetector(aruco_dict, params)
+        corners, ids, rejected = detector.detectMarkers(gray)
 
         if ids is not None:
-            aruco.drawDetectedMarkers(frame, corners, ids)
 
-            count = len(ids)
+            for i in range(len(ids)):
 
-            # LOGIC: Only proceed if we see the expected number of tags
-            if count == REQUIRED_TAG_COUNT:
+                img_points = corners[i].reshape((4,2)).astype(np.float32)
 
-                # Estimate pose for ALL detected markers using the USB size
-                # Since we don't filter by ID, we assume all 4 visible tags are the USB corners
-                rvecs, tvecs, _ = aruco.estimatePoseSingleMarkers(
-                    corners, USB_MARKER_SIZE, camera_matrix, dist_coeffs
+                # ===== SOLVE PNP =====
+                success, rvec, tvec = cv2.solvePnP(
+                    object_points,
+                    img_points,
+                    camera_matrix,
+                    dist_coeffs
                 )
 
-                # Extract tvecs (3D positions)
-                valid_tvecs = [tvec[0] for tvec in tvecs]
+                if not success:
+                    continue
 
-                # Calculate the CENTROID of the 4 markers
-                target_point_3d = calculate_midpoint(valid_tvecs)
+                x = tvec[0][0]
+                z = tvec[2][0]
 
-                if target_point_3d is not None:
-                    # --- VISUALIZATION ---
+                roll, pitch, yaw = get_euler(rvec)
 
-                    # 1. Project the 3D target point back to 2D pixel coordinates
-                    imgpts, _ = cv2.projectPoints(
-                        np.array([target_point_3d]),
-                        np.zeros(3), np.zeros(3),
-                        camera_matrix, dist_coeffs
-                    )
+                # ===== DRAW =====
+                cv2.drawFrameAxes(frame, camera_matrix, dist_coeffs, rvec, tvec, TAG_SIZE/2)
 
-                    center_x = int(imgpts[0][0][0])
-                    center_y = int(imgpts[0][0][1])
+                cx, cy = img_points[0].astype(int)
 
-                    # 2. Draw the Target Crosshair
-                    cv2.circle(frame, (center_x, center_y), 10, TARGET_COLOR, -1)
-                    cv2.putText(frame, "USB TARGET", (center_x + 15, center_y),
-                                cv2.FONT_HERSHEY_SIMPLEX, 0.6, TARGET_COLOR, 2)
+                cv2.putText(frame, f"ID:{ids[i][0]}", (cx, cy),
+                            cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0,255,0), 2)
 
-                    # 3. Draw Distance to Target
-                    dist = np.linalg.norm(target_point_3d)
-                    cv2.putText(frame, f"Depth: {dist:.3f}m", (center_x + 15, center_y + 20),
-                                cv2.FONT_HERSHEY_SIMPLEX, 0.6, TARGET_COLOR, 2)
+                cv2.putText(frame, f"x:{x:.2f} z:{z:.2f}m",
+                            (cx, cy-20), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0,255,0), 2)
 
-                    # Draw lines from all 4 markers to the center
-                    for i in range(count):
-                        marker_center = np.mean(corners[i][0], axis=0).astype(int)
-                        cv2.line(frame, tuple(marker_center), (center_x, center_y), TARGET_COLOR, 1)
+                cv2.putText(frame, f"YAW:{yaw:.1f}",
+                            (cx, cy-40), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0,255,0), 2)
 
-            elif count > 0:
-                # Feedback if we see tags but not the right amount
-                cv2.putText(frame, f"Tags Visible: {count}/{REQUIRED_TAG_COUNT}", (10, 30),
-                            cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 0, 255), 2)
+                # ===== STOP LOGIC =====
+                if z <= DESIRED_DISTANCE:
+                    if not stopped:
+                        print("STOPPED AT 2m")
+                        send_motor_command(0, 0)
+                        stopped = True
+                    continue
+                else:
+                    stopped = False
+
+                # ===== CONTROL =====
+                dist_error = z - DESIRED_DISTANCE
+
+                forward = clamp(KP_FORWARD * dist_error, -100, 100)
+                turn = clamp(KP_TURN * x, -100, 100)
+
+                left  = clamp(forward - turn, -100, 100)
+                right = clamp(forward + turn, -100, 100)
+
+                send_motor_command(left, right)
 
         else:
-            cv2.putText(frame, "Searching for USB Markers...", (10, 30),
-                        cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 0, 255), 2)
+            stopped = False
+            send_motor_command(SPIN_SPEED, -SPIN_SPEED)
 
-        cv2.imshow('URC Task Targeting', frame)
-        if cv2.waitKey(1) == ord('q'): break
+        cv2.imshow("Manual solvePnP", frame)
+
+        if cv2.waitKey(1) == ord('q'):
+            send_motor_command(0, 0)
+            break
 
     cap.release()
     cv2.destroyAllWindows()
 
+# ====================== ENTRY ======================
 
 if __name__ == "__main__":
-    urc_task_targeting()
+    main()

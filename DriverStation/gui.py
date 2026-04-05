@@ -4,6 +4,9 @@ from enum import Enum
 
 CONTROL_BAR_HEIGHT = 300
 TELEMETRY_PANEL_WIDTH = 400
+# New: Global variables for the new Arm Control panel.
+ARM_PANEL_WIDTH = 400
+ARM_PANEL_HEIGHT = 500
 SHOW_IMGUI_TEST_WINDOW = False
 
 CONFIRM_POPOP_WIDTH = 300
@@ -22,6 +25,8 @@ class GuiAction:
 class Gui: 
     def __init__(self):
         self.current_action = None
+        # New: Local state to store the current position of the arm's joint sliders.
+        self.arm_joint_angles = [0.0] * 6
         pass
     
     def led_indicator(self, text, enabled):
@@ -71,7 +76,6 @@ class Gui:
                     if imgui.button("Enable Robot"):
                         state.enable_robot()
 
-                self.button_with_popup("Run Auto Dig", state.run_auto_dig)
                 self.button_with_popup("Restart Code", state.restart_robot_code)
                 self.button_with_popup("Reboot Pi", state.reboot_pi)
                 self.button_with_popup("Reboot RP2040", state.reboot_rp2040)
@@ -79,40 +83,44 @@ class Gui:
             imgui.same_line(spacing=50)
 
             with imgui.begin_group():
-                imgui.text(f"LINKAGE: {state.get_linkage_state()}")
-                self.button_with_popup("Deploy Linkage", state.deploy_intake)
                 self.button_with_popup("Set Manual Control", state.manual_control_intake)
                 if imgui.button("Reset Encoder"):
                     self.current_action = GuiAction('Reset Encoder', state.reset_intake_encoder)
 
-        imgui.same_line(spacing=50)
+    def draw_console_panel(self, state, window_width, window_height):
+        # The console content is now a separate method, to be drawn in its own window.
+        imgui.text("CONSOLE")
+        imgui.same_line(spacing=10)
+        imgui.button("Clear")
 
-        with imgui.begin_group():
-            imgui.text("CONSOLE")
-            imgui.same_line(spacing=10)
-            imgui.button("Clear")
-
-            imgui.begin_child(
-                "Child 2", border=True,
-                flags=imgui.WINDOW_NO_SCROLLBAR
-            )
-            imgui.text_wrapped("This text will wrap around.\n[INFO] this is a log message")
-            imgui.end_child()
+        imgui.begin_child(
+            "Child 2", border=True,
+            flags=imgui.WINDOW_NO_SCROLLBAR
+        )
+        imgui.text_wrapped("This text will wrap around.\n[INFO] this is a log message")
+        imgui.end_child()
+        
         
     def draw_telemetry(self, ds_state):
         telemetry = ds_state.get_telemetry()
         imgui.text(f"Robot enabled: {telemetry.is_robot_enabled()}")
         imgui.text(f"Robot mode: {telemetry.get_robot_mode()}")
-        imgui.text("")
-        imgui.text(f"Intake angle: {telemetry.get_intake_pos()}")
-        imgui.text(f"Intake height: ")
+        
         imgui.text("")
         # FROM OLD ROBOT for picking up and dumping things
-        imgui.text("Dump speed: XXX")
-        imgui.text("Dump torque: XXX")
-        imgui.text("")
+        
         imgui.text(f"Autonomous mode: {telemetry.get_autonomous_mode()}")
         imgui.text("")
+        
+        # New: Display arm telemetry based on the data received from the robot.
+        imgui.text("Arm Telemetry:")
+        arm_pos = telemetry.get_arm_end_effector_pos()
+        imgui.text(f"End-Effector Position (x,y,z): [{arm_pos[0]:.2f}, {arm_pos[1]:.2f}, {arm_pos[2]:.2f}]")
+        for i, angle in enumerate(telemetry.get_arm_joint_angles()):
+            if i == 5: 
+                imgui.text(f"Joint 6 Position: {angle:.2f} cm")
+            else:
+                imgui.text(f"Joint {i+1} Angle: {angle:.2f} deg")
 
         gamepad = ds_state.get_gamepad()
         left_stick = gamepad.get_left_stick()
@@ -122,6 +130,7 @@ class Gui:
         left_speed = telemetry.get_left_motor_speed()
         right_speed = telemetry.get_right_motor_speed()
 
+        imgui.text("")
         imgui.text("Gamepad:")
         imgui.text(f"Left Stick: {left_stick[0]:.2f}, {left_stick[1]:.2f}")
         imgui.text(f"Right Stick: {right_stick[0]:.2f}, {right_stick[1]:.2f}")
@@ -290,25 +299,109 @@ class Gui:
                     if imgui.button("Cancel"):
                         self.current_action = None
 
+    def draw_arm_panel(self, state):
+        imgui.begin("Arm Control", flags=imgui.WINDOW_NO_COLLAPSE | imgui.WINDOW_NO_RESIZE | imgui.WINDOW_NO_MOVE)
+        
+        telemetry = state.get_telemetry()
+        
+        imgui.text("Arm Telemetry")
+        arm_pos = telemetry.get_arm_end_effector_pos()
+        imgui.text(f"End-Effector Position (x,y,z): [{arm_pos[0]:.2f}, {arm_pos[1]:.2f}, {arm_pos[2]:.2f}]")
+        
+        # New: Arm telemetry display
+        imgui.text("")
+        imgui.text("Joint Control")
+        # New: Sliders for each joint
+        for i in range(5):
+            changed, self.arm_joint_angles[i] = imgui.slider_float(
+                f"Joint {i+1} Angle", self.arm_joint_angles[i], -180.0, 180.0, "%.1f deg")
+            if changed:
+                # You would add logic here to send the new joint angle to the robot
+                pass
+            
+        changed, self.arm_joint_angles[5] = imgui.slider_float(
+            "Joint 6 Position", self.arm_joint_angles[5], 0.0, 20.0, "%.1f cm")
+        if changed:
+            pass
+        
+        imgui.text("")
+        imgui.text("Predefined Positions")
+        self.button_with_popup("Stow Arm", state.stow_arm)
+        imgui.same_line()
+        self.button_with_popup("Calibrate Arm", state.calibrate_arm)
+            
+        imgui.end()
+    
+    def draw_arrival_message(self, state, window_width, window_height):
+        telemetry = state.get_telemetry()
+        if telemetry.arrived_at_target:
+            message = "ARRIVED AT TARGET"
+            text_size = imgui.calc_text_size(message)
+            text_x = (window_width - text_size.x) / 2
+            text_y = (window_height - text_size.y) / 2
+
+            imgui.set_cursor_pos((text_x, text_y))
+            imgui.text(message)
+            
+            button_text = "Acknowledge"
+            button_size = imgui.calc_text_size(button_text)
+            button_x = (window_width - button_size.x) / 2
+            button_y = text_y + text_size.y + 20
+            imgui.set_cursor_pos((button_x, button_y))
+            
+            if imgui.button(button_text):
+                telemetry.arrived_at_target = False
 
     def render(self, state, window_size):
         window_width, window_height = window_size
 
-        imgui.set_next_window_size(window_width, CONTROL_BAR_HEIGHT)
-        imgui.set_next_window_position(0, window_height - CONTROL_BAR_HEIGHT)
+        top_half_height = window_height - CONTROL_BAR_HEIGHT
+        bottom_half_height = CONTROL_BAR_HEIGHT
+        bottom_y = top_half_height
+
+        # Top half: Telemetry Panel
+        imgui.set_next_window_size(TELEMETRY_PANEL_WIDTH, top_half_height)
+        imgui.set_next_window_position(0, 0)
+        imgui.begin("Telemetry", flags=imgui.WINDOW_NO_COLLAPSE | imgui.WINDOW_NO_RESIZE | imgui.WINDOW_NO_MOVE)
+        self.draw_telemetry(state)
+        imgui.end()
+
+        # Bottom half: Control Bar (left), Arm Control (middle), and Console (right)
+        total_bottom_width = window_width
+        
+        # Determine the width for each of the three bottom panels.
+        # Let's give Control Bar and Arm Control fixed widths, and Console the rest.
+        control_bar_width = 350
+        arm_panel_width = 350
+        console_panel_width = total_bottom_width - control_bar_width - arm_panel_width
+        
+        # Control Bar (bottom-left)
+        imgui.set_next_window_size(control_bar_width, bottom_half_height)
+        imgui.set_next_window_position(0, bottom_y)
         imgui.begin("Control Bar", flags=imgui.WINDOW_NO_COLLAPSE | imgui.WINDOW_NO_RESIZE | imgui.WINDOW_NO_MOVE)
         self.draw_ctrl_bar(state)
         imgui.end()
 
-        imgui.set_next_window_size(TELEMETRY_PANEL_WIDTH, window_height - CONTROL_BAR_HEIGHT)
-        imgui.set_next_window_position(0, 0)
-        imgui.begin("Telemetry", flags=imgui.WINDOW_NO_COLLAPSE | imgui.WINDOW_NO_RESIZE | imgui.WINDOW_NO_MOVE)
-        self.draw_telemetry(state)
-        #self.draw_robot(state)
+        # Arm Control panel (bottom-middle)
+        imgui.set_next_window_size(arm_panel_width, bottom_half_height)
+        imgui.set_next_window_position(control_bar_width, bottom_y)
+        self.draw_arm_panel(state)
+        
+        # Console (bottom-right)
+        imgui.set_next_window_size(console_panel_width, bottom_half_height)
+        imgui.set_next_window_position(control_bar_width + arm_panel_width, bottom_y)
+        imgui.begin("Console", flags=imgui.WINDOW_NO_COLLAPSE | imgui.WINDOW_NO_RESIZE | imgui.WINDOW_NO_MOVE)
+        # The content of the console is now drawn in a separate method
+        imgui.text("CONSOLE")
+        imgui.same_line(spacing=10)
+        imgui.button("Clear")
+        imgui.begin_child("Child 2", border=True, flags=imgui.WINDOW_NO_SCROLLBAR)
+        imgui.text_wrapped("This text will wrap around.\n[INFO] this is a log message")
+        imgui.end_child()
         imgui.end()
 
         self.draw_confirmation_box(window_width, window_height)
+        self.draw_arrival_message(state, window_width, window_height)
 
         if SHOW_IMGUI_TEST_WINDOW:
             imgui.show_test_window()
-            

@@ -8,4 +8,5 @@ compile_commands.json
 
 # Robot Code Subprojects
 RobotCode/subprojects/*
-!RobotCode/subprojects/asio.wrap
+!RobotCofe/subprojects/asio.wrap
+/venv

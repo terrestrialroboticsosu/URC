@@ -6,42 +6,38 @@ project(
   default_options: [],
 )
 
+# Add global defines
 add_global_arguments('-DSOME_TOKEN=value', language: 'cpp')
 
-# Combine all include directories into a single variable
-inc = include_directories('include', 'libs/orocos-kdl/include')
+# Include directory for project headers
+inc = include_directories('include')
 
-proj_sources = [
+# List all source files under src/ (excluding robotArm.cpp)
+proj_sources = files(
   'src/main.cpp',
   'src/driverStation.cpp',
   'src/robotActuation.cpp',
   'src/robotControl.cpp',
-  'src/robotState.cpp',
   'src/robotSerial.cpp',
-  'src/util.cpp',
-  'src/robotArm.cpp'
-]
+  'src/robotState.cpp',
+  'src/util.cpp'
+)
 
+# ASIO subproject
 asio = subproject('asio')
 asio_dep = asio.get_variable('asio_dep')
 
-# Since the include path is handled above, this dependency now only needs the library file.
-cpp = meson.get_compiler('cpp')
-orocos_kdl_lib = cpp.find_library('orocos-kdl', dirs: meson.current_source_dir() + '/libs/orocos-kdl/lib')
-orocos_kdl_dep = declare_dependency(
-  dependencies: [orocos_kdl_lib]
-)
-
+# Link arguments for Windows only
 link_args = ''
-if build_machine.system() == 'windows'
-  link_args += '-lwsock32' # Required by ASIO
+if host_machine.system() == 'windows'
+  link_args += '-lwsock32'
 endif
 
+# Build executable
 executable(
   'urcbot',
   proj_sources,
-  # Use the combined include directories here
   include_directories: inc,
-  dependencies: [asio_dep, orocos_kdl_dep],
+  dependencies: [asio_dep],
   link_args: link_args
 )
